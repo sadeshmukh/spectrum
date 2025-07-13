@@ -1,0 +1,281 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { getSession } from "auth-astro/server";
+import { SignOut } from "auth-astro/components";
+
+const session = await getSession(Astro.request);
+
+if (!session) {
+  return Astro.redirect("/login");
+}
+
+const user = session.user!;
+---
+
+<Layout title="Dashboard - Spectrum">
+  <div class="min-h-screen bg-black">
+    <!-- Nav -->
+    <nav class="border-b border-gray-800 bg-card">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="flex justify-between items-center h-16">
+          <h1 class="text-xl font-bold text-white">SPECTRUM</h1>
+          <div class="flex items-center gap-4">
+            <!-- User Dropdown -->
+            <div class="relative">
+              <button
+                id="userDropdown"
+                class="flex items-center gap-2 hover:bg-gray-800/50 rounded-lg p-2 transition-colors"
+              >
+                <img
+                  class="w-8 h-8 rounded-full"
+                  src={user.image}
+                  alt={user.name}
+                />
+                <span class="text-white text-sm">{user.name}</span>
+                <svg
+                  class="w-4 h-4 text-muted"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+
+              <!-- Dropdown Menu -->
+              <div
+                id="userDropdownMenu"
+                class="absolute right-0 mt-2 w-64 bg-card border border-gray-700 rounded-lg shadow-lg z-50 hidden"
+              >
+                <div class="p-4">
+                  <div class="flex items-center gap-3 mb-3">
+                    <img
+                      class="w-12 h-12 rounded-full"
+                      src={user.image}
+                      alt={user.name}
+                    />
+                    <div>
+                      <p class="text-white text-sm font-medium">{user.name}</p>
+                      <p class="text-muted text-xs">{user.email}</p>
+                    </div>
+                  </div>
+                  <div class="border-t border-gray-700 pt-3">
+                    <p class="text-muted text-xs">Account</p>
+                    <p class="text-white text-sm mt-1">{user.email}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {
+              user.isAdmin && (
+                <a
+                  href="/admin"
+                  class="bg-accent text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent/90 transition-colors"
+                >
+                  Admin Panel
+                </a>
+              )
+            }
+            <SignOut class="text-muted hover:text-white text-sm">
+              Sign out
+            </SignOut>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main -->
+    <main class="max-w-7xl mx-auto px-6 py-8">
+      <!-- Welcome -->
+      <div class="mb-8">
+        <h2 class="text-2xl font-bold text-white mb-1">
+          Welcome back, {user.name?.split(" ")[0]}
+        </h2>
+      </div>
+
+      <!-- Challenge Section - BIG and Prominent -->
+      <div
+        class="bg-gradient-to-br from-accent/20 to-accent/5 rounded-xl p-8 mb-8 border border-accent/20"
+      >
+        <div class="text-center">
+          <div
+            class="w-20 h-20 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-6"
+          >
+            <svg
+              class="w-10 h-10 text-accent"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+          <h3 class="text-3xl font-bold text-white mb-2">Ready to Guess?</h3>
+          <p class="text-muted text-lg mb-8">
+            <span class="text-accent">🤔</span>
+            Good luck!
+          </p>
+          <button
+            class="bg-accent text-black px-8 py-4 rounded-lg text-lg font-semibold hover:bg-accent/90 transition-colors transform hover:scale-105 shadow-lg"
+          >
+            MAKE A GUESS
+          </button>
+        </div>
+      </div>
+
+      <!-- Personal Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-card rounded-lg p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-muted text-sm">Your Guesses</p>
+              <p class="text-2xl font-bold text-white">0</p>
+            </div>
+            <div
+              class="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center"
+            >
+              <svg
+                class="w-5 h-5 text-accent"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                ></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-card rounded-lg p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-muted text-sm">Best Result</p>
+              <p class="text-2xl font-bold text-white">—</p>
+            </div>
+            <div
+              class="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center"
+            >
+              <svg
+                class="w-5 h-5 text-accent"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 3l14 9-14 9V3z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-card rounded-lg p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-muted text-sm">Global Rank</p>
+              <p class="text-2xl font-bold text-white">—</p>
+            </div>
+            <div
+              class="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center"
+            >
+              <svg
+                class="w-5 h-5 text-accent"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="bg-card rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">
+          Your Recent Guesses
+        </h3>
+        <div class="text-center py-8">
+          <div
+            class="w-12 h-12 bg-muted/10 rounded-full flex items-center justify-center mx-auto mb-4"
+          >
+            <svg
+              class="w-6 h-6 text-muted"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+          </div>
+          <p class="text-muted text-sm">No guesses yet</p>
+          <p class="text-muted text-xs mt-1">
+            Make your first guess to see your activity here
+          </p>
+        </div>
+      </div>
+    </main>
+  </div>
+</Layout>
+
+<script>
+  // Handle user dropdown functionality
+  document.addEventListener("DOMContentLoaded", function () {
+    const dropdownButton = document.getElementById("userDropdown");
+    const dropdownMenu = document.getElementById("userDropdownMenu");
+
+    // Toggle dropdown when button is clicked
+    dropdownButton?.addEventListener("click", function (e) {
+      e.stopPropagation();
+      dropdownMenu?.classList.toggle("hidden");
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener("click", function (e) {
+      const target = e.target as Node;
+      if (
+        !dropdownButton?.contains(target) &&
+        !dropdownMenu?.contains(target)
+      ) {
+        dropdownMenu?.classList.add("hidden");
+      }
+    });
+
+    // Close dropdown when pressing escape
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        dropdownMenu?.classList.add("hidden");
+      }
+    });
+  });
+</script>
