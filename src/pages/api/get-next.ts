@@ -22,7 +22,21 @@ function calculatePriceCap(actualPrice: number): number {
 export const GET: APIRoute = async ({ request }) => {
   try {
     const session = await getSession(request);
-    const userId = session?.user?.email || "anonymous@sahil.ink";
+
+    if (!session?.user?.email) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Authentication required",
+        }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const userId = session.user.email;
 
     const availableItems = await db
       .select()
@@ -103,7 +117,6 @@ export const GET: APIRoute = async ({ request }) => {
       JSON.stringify({
         success: false,
         error: "Internal server error",
-        message: error instanceof Error ? error.message : "Unknown error",
       }),
       {
         status: 500,

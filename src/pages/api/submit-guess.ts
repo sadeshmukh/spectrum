@@ -22,7 +22,21 @@ function calculatePriceCap(actualPrice: number): number {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const session = await getSession(request);
-    const userId = session?.user?.email || "anonymous@spectrum.local";
+
+    if (!session?.user?.email) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Authentication required",
+        }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const userId = session.user.email;
 
     const body = await request.json();
     const { itemId, guess } = body;
@@ -32,6 +46,32 @@ export const POST: APIRoute = async ({ request }) => {
         JSON.stringify({
           success: false,
           error: "Missing required fields",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (typeof itemId !== "number" || itemId <= 0) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid item ID",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (typeof guess !== "number" || guess < 0) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Guess must be a positive number",
         }),
         {
           status: 400,
@@ -125,7 +165,6 @@ export const POST: APIRoute = async ({ request }) => {
       JSON.stringify({
         success: false,
         error: "Internal server error",
-        message: error instanceof Error ? error.message : "Unknown error",
       }),
       {
         status: 500,

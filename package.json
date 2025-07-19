@@ -7,8 +7,10 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "populate": "tsx scripts/populate-items.ts",
-    "mock": "tsx scripts/generate-mock-products.ts"
+    "populate:amazon": "tsx scripts/amazon-populate.ts",
+    "populate:fakestore": "tsx scripts/fakestore-populate.ts",
+    "populate:dummyjson": "tsx scripts/dummyjson-populate.ts",
+    "populate:mock": "tsx scripts/mock-populate.ts"
   },
   "dependencies": {
     "@astrojs/db": "^0.15.0",

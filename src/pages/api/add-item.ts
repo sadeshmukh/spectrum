@@ -48,6 +48,34 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    try {
+      new URL(url);
+    } catch {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid URL format",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (price !== undefined && (typeof price !== "number" || price < 0)) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Price must be a positive number",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const itemData = {
       link: url,
       photoUrl: image || null,

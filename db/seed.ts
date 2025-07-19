@@ -12,19 +12,7 @@ export default async function seed() {
     await db.insert(Users).values({
       email: "admin@sahil.ink",
       name: "Admin User",
-    });
-  }
-
-  const anonUser = await db
-    .select()
-    .from(Users)
-    .where(eq(Users.email, "anonymous@sahil.ink"))
-    .get();
-
-  if (!anonUser) {
-    await db.insert(Users).values({
-      email: "anonymous@sahil.ink",
-      name: "Anonymous User",
+      isAdmin: true,
     });
   }
 

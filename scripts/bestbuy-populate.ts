@@ -1,0 +1,270 @@
+import { scrapeBestBuyPrice } from "../src/lib/bestbuy-scraper";
+import { writeFile } from "fs/promises";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+import pLimit from "p-limit";
+
+const SEARCH_TERMS = [
+  "laptop",
+  "smartphone",
+  "headphones",
+  "tv",
+  "gaming console",
+  "camera",
+  "tablet",
+  "monitor",
+  "keyboard",
+  "mouse",
+  "speaker",
+  "microphone",
+  "router",
+  "printer",
+  "scanner",
+];
+
+const CONCURRENCY = 2;
+const limit = pLimit(CONCURRENCY);
+
+const USER_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+];
+
+function getRandomUserAgent() {
+  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+async function delay(min: number, max: number) {
+  const delayTime = min + Math.random() * (max - min);
+  return new Promise((resolve) => setTimeout(resolve, delayTime));
+}
+
+async function longerDelay() {
+  const delayTime = 20000 + Math.random() * 40000;
+  return new Promise((resolve) => setTimeout(resolve, delayTime));
+}
+
+async function generateSearchUrls(count = 20) {
+  return Array.from({ length: count }, () => {
+    const term = SEARCH_TERMS[Math.floor(Math.random() * SEARCH_TERMS.length)];
+    return `https://www.bestbuy.com/site/searchpage.jsp?st=${encodeURIComponent(
+      term
+    )}`;
+  });
+}
+
+async function extractProductUrls(searchUrl: string): Promise<string[]> {
+  try {
+    const response = await fetch(searchUrl, {
+      headers: {
+        "User-Agent": getRandomUserAgent(),
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "no-cache",
+        "Sec-Ch-Ua":
+          '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        Referer: "https://www.bestbuy.com/",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+
+    const html = await response.text();
+
+    const urlSet = new Set<string>();
+
+    const skuMatches = html.match(/data-sku="([A-Z0-9]+)"/g) || [];
+
+    for (const match of skuMatches) {
+      const sku = match.match(/data-sku="([A-Z0-9]+)"/)![1];
+      urlSet.add(`https://www.bestbuy.com/site/${sku}`);
+    }
+
+    const linkMatches = html.matchAll(
+      /href="(\/[^"]*\/(?:site|p|product)\/[A-Z0-9]+[^"]*)"/g
+    );
+    for (const [, path] of linkMatches) {
+      urlSet.add(`https://www.bestbuy.com${path.split("?")[0]}`);
+    }
+
+    const urls = [...urlSet].slice(0, 5);
+    return urls;
+  } catch (error) {
+    console.error(`Failed to extract products from ${searchUrl}:`, error);
+    return [];
+  }
+}
+
+interface ScrapedItem {
+  link: string;
+  photoUrl: string | undefined;
+  title: string | undefined;
+  actualPrice: number | undefined;
+}
+
+async function scrapeProduct(productUrl: string): Promise<ScrapedItem | null> {
+  try {
+    await delay(8000, 20000);
+
+    const result = await scrapeBestBuyPrice(productUrl);
+
+    if (result.success && result.data) {
+      const { title, price, image: photoUrl } = result.data;
+      return {
+        link: productUrl,
+        photoUrl: photoUrl || undefined,
+        title: title || undefined,
+        actualPrice: price || undefined,
+      };
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error(`Failed to process product ${productUrl}:`, error);
+    return null;
+  }
+}
+
+async function processSearchUrl(
+  searchUrl: string,
+  items: ScrapedItem[],
+  stats: { success: number; failure: number }
+) {
+  try {
+    const productUrls = await extractProductUrls(searchUrl);
+
+    if (productUrls.length === 0) {
+      return;
+    }
+
+    const scrapePromises = productUrls.map((url) =>
+      limit(() => scrapeProduct(url))
+    );
+
+    const results = await Promise.all(scrapePromises);
+
+    const successfulItems = results.filter(
+      (item): item is ScrapedItem => item !== null
+    );
+
+    items.push(...successfulItems);
+    stats.success += successfulItems.length;
+    stats.failure += results.length - successfulItems.length;
+
+    await longerDelay();
+  } catch (error) {
+    console.error(`Failed to process search ${searchUrl}:`, error);
+    stats.failure++;
+  }
+}
+
+async function writeScrapedData(items: ScrapedItem[]) {
+  const validItems = items.filter((item) => {
+    const isValid = item.title && item.actualPrice && item.actualPrice > 0;
+    return isValid;
+  });
+
+  const outputPath = join(
+    dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "db",
+    "scraped-items.ts"
+  );
+
+  const fileContent = `// This file is auto-generated by scripts/bestbuy-populate.ts
+
+export const scrapedItems = ${JSON.stringify(validItems, null, 2)} as const;
+`;
+
+  await writeFile(outputPath, fileContent, "utf-8");
+  console.log(`\n💾 Wrote ${validItems.length} valid items to ${outputPath}`);
+}
+
+async function main() {
+  try {
+    console.log("🚀 Starting BestBuy product collection...\n");
+
+    const mainLimit = pLimit(CONCURRENCY);
+    const items: ScrapedItem[] = [];
+    const stats = { success: 0, failure: 0 };
+
+    const searchUrls = await generateSearchUrls(3);
+
+    for (const searchUrl of searchUrls) {
+      try {
+        const productUrls = await extractProductUrls(searchUrl);
+
+        if (productUrls.length === 0) {
+          continue;
+        }
+
+        const productPromises = productUrls.map((url) =>
+          mainLimit(async () => {
+            try {
+              await delay(8000, 20000);
+              const result = await scrapeBestBuyPrice(url);
+
+              if (result.success && result.data) {
+                const { title, price, image: photoUrl } = result.data;
+                return {
+                  link: url,
+                  photoUrl: photoUrl || undefined,
+                  title: title || undefined,
+                  actualPrice: price || undefined,
+                };
+              } else {
+                return null;
+              }
+            } catch (error) {
+              console.error(`Error scraping ${url}:`, error);
+              return null;
+            }
+          })
+        );
+
+        const results = await Promise.all(productPromises);
+
+        const successfulItems = results.filter(
+          (item): item is ScrapedItem => item !== null
+        );
+
+        items.push(...successfulItems);
+        stats.success += successfulItems.length;
+        stats.failure += results.length - successfulItems.length;
+
+        await longerDelay();
+      } catch (searchError) {
+        console.error(`Error processing search ${searchUrl}:`, searchError);
+        stats.failure++;
+      }
+    }
+
+    if (items.length === 0) {
+      throw new Error("No items were collected");
+    }
+
+    await writeScrapedData(items);
+
+    console.log("\n✅ Product collection completed successfully!");
+  } catch (error) {
+    console.error("=== Fatal Error ===");
+    console.error(error);
+    process.exit(1);
+  }
+}
+
+main().catch((error) => {
+  console.error("=== Unhandled Error ===");
+  console.error(error);
+  process.exit(1);
+});
