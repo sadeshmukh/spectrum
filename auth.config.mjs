@@ -1,5 +1,6 @@
 import { defineConfig } from "auth-astro";
 import GitHub from "@auth/core/providers/github";
+import { db, Users, eq } from "astro:db";
 
 export default defineConfig({
   providers: [
@@ -9,20 +10,50 @@ export default defineConfig({
     }),
   ],
   callbacks: {
-    async jwt({ token, account, profile }) {
-      if (account && profile) {
-        token.email = profile.email;
-        token.name = profile.name;
-        token.picture = profile.avatar_url;
+    async signIn({ user, account, profile }) {
+      if (!user.email) return false;
+
+      let dbUser = await db
+        .select()
+        .from(Users)
+        .where(eq(Users.email, user.email))
+        .get();
+
+      if (!dbUser) {
+        // create user if they don't exist
+        dbUser = await db
+          .insert(Users)
+          .values({
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            isAdmin: import.meta.env.ADMIN_EMAIL === user.email,
+          })
+          .returning()
+          .get();
+      }
+
+      user.id = dbUser.id;
+      return true;
+    },
+    async jwt({ token, user, account, profile }) {
+      if (user) {
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.picture = user.image;
       }
       return token;
     },
     async session({ session, token }) {
       if (token) {
-        session.user.email = token.email;
-        session.user.name = token.name;
-        session.user.image = token.picture;
-        session.user.isAdmin = import.meta.env.ADMIN_EMAIL === token.email;
+        session.user = {
+          id: token.id,
+          email: token.email,
+          name: token.name,
+          image: token.picture,
+          isAdmin: import.meta.env.ADMIN_EMAIL === token.email,
+        };
       }
       return session;
     },

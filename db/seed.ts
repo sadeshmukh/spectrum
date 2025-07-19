@@ -1,44 +1,43 @@
-import { db, Users, Items, UserGuesses } from "astro:db";
+import { db, Users, Items, eq } from "astro:db";
+import { scrapedItems } from "./scraped-items";
 
 export default async function seed() {
-  await db.insert(Users).values([
-    {
-      id: "abc123",
-      email: "john@example.com",
-      name: "John Doe",
-      image: "https://example.com/john.jpg",
-      isAdmin: false,
-    },
-    {
-      id: "admin-1",
-      email: "admin@example.com",
-      name: "Admin User",
-      image: "https://example.com/admin.jpg",
-      isAdmin: true,
-    },
-  ]);
+  const adminUser = await db
+    .select()
+    .from(Users)
+    .where(eq(Users.email, "admin@sahil.ink"))
+    .get();
 
-  await db.insert(Items).values([
-    {
-      link: "https://amazon.com/example-item-1",
-      photoUrl: "https://example.com/image1.jpg",
-      title: "Example Amazon Item 1",
-      actualPrice: 29.99,
-    },
-  ]);
-  // will fix seeded db eventually
-  await db.insert(UserGuesses).values([
-    {
-      userId: "abc123",
-      itemId: 1,
-      guess: 25.0,
-      accuracy: 83.5,
-    },
-    {
-      userId: "admin-1",
-      itemId: 1,
-      guess: 35.0,
-      accuracy: 84.5,
-    },
-  ]);
+  if (!adminUser) {
+    await db.insert(Users).values({
+      email: "admin@sahil.ink",
+      name: "Admin User",
+    });
+  }
+
+  const anonUser = await db
+    .select()
+    .from(Users)
+    .where(eq(Users.email, "anonymous@sahil.ink"))
+    .get();
+
+  if (!anonUser) {
+    await db.insert(Users).values({
+      email: "anonymous@sahil.ink",
+      name: "Anonymous User",
+    });
+  }
+
+  if (scrapedItems.length > 0) {
+    for (const item of scrapedItems) {
+      const existingItem = await db
+        .select()
+        .from(Items)
+        .where(eq(Items.link, item.link))
+        .get();
+      if (!existingItem) {
+        await db.insert(Items).values(item);
+      }
+    }
+  }
 }

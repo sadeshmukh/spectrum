@@ -1,0 +1,114 @@
+import type { APIRoute } from "astro";
+import { getSession } from "auth-astro/server";
+import { db, Items, UserGuesses, UserSessions, eq, sql } from "astro:db";
+
+function calculatePriceCap(actualPrice: number): number {
+  const multiplier = 1 + Math.random() * 2;
+  const rawCap = actualPrice * multiplier;
+
+  if (rawCap < 50) {
+    return Math.ceil(rawCap / 5) * 5;
+  } else if (rawCap < 200) {
+    return Math.ceil(rawCap / 10) * 10;
+  } else if (rawCap < 1000) {
+    return Math.ceil(rawCap / 25) * 25;
+  } else if (rawCap < 5000) {
+    return Math.ceil(rawCap / 100) * 100;
+  } else {
+    return Math.ceil(rawCap / 500) * 500;
+  }
+}
+
+export const GET: APIRoute = async ({ request }) => {
+  try {
+    const session = await getSession(request);
+    const userId = session?.user?.email || "anonymous@sahil.ink";
+
+    const availableItems = await db
+      .select()
+      .from(Items)
+      .where(sql`${Items.actualPrice} IS NOT NULL`);
+
+    if (availableItems.length === 0) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "No items available",
+          message: "No items have been added to the system yet.",
+        }),
+        {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    let selectedItem;
+    let maxPrice;
+
+    const existingSession = await db
+      .select()
+      .from(UserSessions)
+      .where(eq(UserSessions.userId, userId))
+      .get();
+
+    if (existingSession) {
+      const currentItem = await db
+        .select()
+        .from(Items)
+        .where(eq(Items.id, existingSession.currentItemId))
+        .get();
+
+      if (currentItem && currentItem.actualPrice !== null) {
+        selectedItem = currentItem;
+        maxPrice = existingSession.maxPrice;
+      } else {
+        await db.delete(UserSessions).where(eq(UserSessions.userId, userId));
+      }
+    }
+
+    if (!selectedItem) {
+      const randomIndex = Math.floor(Math.random() * availableItems.length);
+      selectedItem = availableItems[randomIndex];
+      maxPrice = calculatePriceCap(selectedItem.actualPrice!);
+
+      await db.insert(UserSessions).values({
+        userId: userId,
+        currentItemId: selectedItem.id,
+        maxPrice: maxPrice,
+      });
+    }
+
+    const itemForUser = {
+      id: selectedItem.id,
+      title: selectedItem.title,
+      photoUrl: selectedItem.photoUrl,
+      link: selectedItem.link,
+      maxPrice: maxPrice,
+    };
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data: itemForUser,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  } catch (error) {
+    console.error("API Error:", error);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+};

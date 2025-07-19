@@ -17,18 +17,15 @@ if (!user.isAdmin) {
   return Astro.redirect("/dashboard");
 }
 
-// Fetch real data from Astro DB
 const totalItems = await db.select({ count: count() }).from(Items);
 const totalGuesses = await db.select({ count: count() }).from(UserGuesses);
 
-// Get recent items (last 10)
 const recentItems = await db
   .select()
   .from(Items)
   .orderBy(desc(Items.createdAt))
   .limit(10);
 
-// Get recent guesses with user info (last 10)
 const recentGuessesData = await db
   .select()
   .from(UserGuesses)
@@ -36,7 +33,7 @@ const recentGuessesData = await db
   .limit(10);
 
 const globalStats = {
-  totalUsers: 0, // We don't have a users table yet
+  totalUsers: 0, // placeholder
   totalGuesses: totalGuesses[0]?.count || 0,
   totalItems: totalItems[0]?.count || 0,
   averageAccuracy: 0, // placeholder

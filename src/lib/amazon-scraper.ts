@@ -10,9 +10,6 @@ interface AmazonProduct {
   price: number | null;
   currency: string;
   image: string | null;
-  availability: string;
-  rating: number | null;
-  reviewCount: number | null;
 }
 
 interface ScrapingResult {
@@ -21,56 +18,86 @@ interface ScrapingResult {
   error: string | null;
 }
 
-/**
- * Extracts price from Amazon product page
- * @param url - Amazon product URL
- * @returns Promise<ScrapingResult>
- */
-export async function scrapeAmazonPrice(url: string): Promise<ScrapingResult> {
+const USER_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Safari/605.1.15",
+];
+
+export async function scrapeAmazonPrice(
+  url: string,
+  retries = 2
+): Promise<ScrapingResult> {
   try {
     if (!isValidAmazonUrl(url)) {
-      return {
-        success: false,
-        data: null,
-        error: "Invalid Amazon URL provided",
-      };
+      return { success: false, data: null, error: "Invalid Amazon URL" };
     }
 
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Accept-Encoding": "gzip, deflate",
-        Connection: "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
-      },
-    });
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(url, {
+          headers: {
+            "User-Agent":
+              USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+            Accept:
+              "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate",
+            Connection: "keep-alive",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+            DNT: "1",
+            "Upgrade-Insecure-Requests": "1",
+          },
+        });
 
-    if (!response.ok) {
-      return {
-        success: false,
-        data: null,
-        error: `HTTP error: ${response.status}`,
-      };
+        if (!response.ok) {
+          if (attempt < retries) continue;
+          return {
+            success: false,
+            data: null,
+            error: `HTTP error: ${response.status}`,
+          };
+        }
+
+        const html = await response.text();
+        if (
+          html.includes(
+            "To discuss automated access to Amazon data please contact"
+          )
+        ) {
+          if (attempt < retries) continue;
+          return {
+            success: false,
+            data: null,
+            error: "Rate limited by Amazon",
+          };
+        }
+
+        const product = parseAmazonHTML(html);
+        if (!product.title && !product.price) {
+          if (attempt < retries) continue;
+          return {
+            success: false,
+            data: null,
+            error: "Failed to extract product data",
+          };
+        }
+
+        return { success: true, data: product, error: null };
+      } catch (error) {
+        if (attempt < retries) continue;
+        throw error;
+      }
     }
 
-    const html = await response.text();
-
-    const productData = parseAmazonHTML(html);
-
-    return {
-      success: true,
-      data: productData,
-      error: null,
-    };
+    return { success: false, data: null, error: "Max retries exceeded" };
   } catch (error) {
     return {
       success: false,
       data: null,
-      error: error instanceof Error ? error.message : "Unknown error occurred",
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -107,230 +134,84 @@ function isValidAmazonUrl(url: string): boolean {
   }
 }
 
-/**
- * extract product information from amazon html
- */
 function parseAmazonHTML(html: string): AmazonProduct {
-  const priceSelectors = [
-    ".a-price-whole",
-    ".a-price .a-offscreen",
-    "#priceblock_dealprice",
-    "#priceblock_ourprice",
-    ".a-price-range",
-    ".a-price.a-text-price.a-size-medium.apexPriceToPay",
-    ".a-price.a-text-price.a-size-medium.apexPriceToPay .a-offscreen",
-    ".a-price.a-text-price.a-size-large.apexPriceToPay .a-offscreen",
-    ".a-price.a-text-price.a-size-medium.apexPriceToPay .a-price-whole",
-    ".a-price.a-text-price.a-size-large.apexPriceToPay .a-price-whole",
-  ];
-
-  const titleSelectors = [
-    "#productTitle",
-    ".product-title",
-    "h1.a-size-large",
-    "h1.a-size-base-plus",
-  ];
-
-  const imageSelectors = [
-    "#landingImage",
-    "#imgBlkFront",
-    ".a-dynamic-image",
-    ".a-spacing-small img",
-  ];
-
-  const ratingSelectors = [
-    ".a-icon-alt",
-    ".a-icon.a-icon-star .a-icon-alt",
-    ".reviewCountTextLinkedHistogram .a-declarative .a-link-normal",
-  ];
-
-  const availabilitySelectors = [
-    "#availability span",
-    ".a-color-success",
-    ".a-color-state",
-    ".a-color-price",
-  ];
-
   const product: AmazonProduct = {
     title: "",
     price: null,
     currency: "USD",
     image: null,
-    availability: "",
-    rating: null,
-    reviewCount: null,
   };
 
-  // extract title
-  for (const selector of titleSelectors) {
-    const match = html.match(
-      new RegExp(`<[^>]*id="${selector.replace("#", "")}"[^>]*>([^<]*)</`, "i")
-    );
-    if (match) {
-      product.title = cleanText(match[1]);
-      break;
-    }
+  // Extract title
+  const titleMatch =
+    html.match(/<span\s+id="productTitle"[^>]*>([^<]+)<\/span>/i) ||
+    html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+  if (titleMatch) {
+    product.title = titleMatch[1].trim();
   }
 
-  // Extract price
-  const priceText = extractPrice(html, priceSelectors);
-  if (priceText) {
-    const price = parsePrice(priceText);
-    if (price) {
-      product.price = price.amount;
-      product.currency = price.currency;
+  // Extract price using multiple patterns
+  const pricePatterns = [
+    /class="a-price"[^>]*>[^<]*<span[^>]*>([^<]+)<\/span>/i,
+    /class="a-price-whole">([^<]+)<\/span>/i,
+    /class="a-offscreen">([^<]+)<\/span>/i,
+    /id="priceblock_ourprice"[^>]*>([^<]+)<\/span>/i,
+    /id="priceblock_dealprice"[^>]*>([^<]+)<\/span>/i,
+  ];
+
+  for (const pattern of pricePatterns) {
+    const match = html.match(pattern);
+    if (match) {
+      const priceText = match[1].trim();
+      const price = parsePrice(priceText);
+      if (price) {
+        product.price = price.amount;
+        product.currency = price.currency;
+        break;
+      }
     }
   }
 
   // Extract image
-  for (const selector of imageSelectors) {
-    const match = html.match(
-      new RegExp(
-        `<[^>]*id="${selector.replace("#", "")}"[^>]*src="([^"]*)"`,
-        "i"
-      )
-    );
-    if (match) {
-      product.image = match[1];
-      break;
-    }
-  }
-
-  // Extract availability
-  for (const selector of availabilitySelectors) {
-    const match = html.match(
-      new RegExp(
-        `<[^>]*class="[^"]*${selector.replace(".", "")}[^"]*"[^>]*>([^<]*)</`,
-        "i"
-      )
-    );
-    if (match) {
-      product.availability = cleanText(match[1]);
-      break;
-    }
-  }
-
-  // Extract rating
-  const ratingMatch = html.match(/(\d+\.?\d*)\s*out of\s*5\s*stars/i);
-  if (ratingMatch) {
-    product.rating = parseFloat(ratingMatch[1]);
-  }
-
-  // Extract review count
-  const reviewMatch = html.match(/(\d+(?:,\d+)*)\s*(?:customer\s*)?reviews?/i);
-  if (reviewMatch) {
-    product.reviewCount = parseInt(reviewMatch[1].replace(/,/g, ""));
+  const imageMatch =
+    html.match(/id="landingImage"[^>]*src="([^"]+)"/i) ||
+    html.match(/id="imgBlkFront"[^>]*src="([^"]+)"/i);
+  if (imageMatch) {
+    product.image = imageMatch[1];
   }
 
   return product;
 }
 
-function extractPrice(html: string, selectors: string[]): string | null {
-  for (const selector of selectors) {
-    const className = selector.replace(".", "");
-    const patterns = [
-      new RegExp(`<[^>]*class="[^"]*${className}[^"]*"[^>]*>([^<]*)</`, "i"),
-      new RegExp(
-        `<[^>]*class="[^"]*${className}[^"]*"[^>]*>.*?<[^>]*>([^<]*)</`,
-        "i"
-      ),
-      new RegExp(
-        `<span[^>]*class="[^"]*${className}[^"]*"[^>]*>([^<]*)</span>`,
-        "i"
-      ),
-    ];
-
-    for (const pattern of patterns) {
-      const match = html.match(pattern);
-      if (match && match[1]) {
-        const text = cleanText(match[1]);
-        if (text.match(/[\d,]+\.?\d*/)) {
-          return text;
-        }
-      }
-    }
-  }
-
-  // just search for random price pattern
-  const fallbackPattern = /[\$£€¥₹]\s*(\d+(?:,\d+)*(?:\.\d+)?)/g;
-  const fallbackMatch = html.match(fallbackPattern);
-  if (fallbackMatch && fallbackMatch[0]) {
-    console.log("fallback detected");
-    console.log("fallbackMatch", fallbackMatch[0]);
-    return fallbackMatch[0];
-  }
-
-  return null;
-}
-
-/**
- * Extracts amount and currency from price text
- */
 function parsePrice(
   priceText: string
 ): { amount: number; currency: string } | null {
-  const cleaned = priceText.replace(/[^\d.,\$£€¥₹]/g, "");
+  try {
+    const cleanText = priceText.replace(/[^\d.,]/g, "").replace(/,/g, ".");
+    const amount = parseFloat(cleanText);
+    if (isNaN(amount)) return null;
 
-  let currency = "USD";
+    let currency = "USD";
+    if (priceText.includes("£")) currency = "GBP";
+    else if (priceText.includes("€")) currency = "EUR";
+    else if (priceText.includes("¥")) currency = "JPY";
+    else if (priceText.includes("₹")) currency = "INR";
+    else if (priceText.includes("$")) {
+      if (priceText.includes("CA")) currency = "CAD";
+      else if (priceText.includes("AU")) currency = "AUD";
+    }
 
-  if (cleaned.includes("£")) {
-    currency = "GBP";
-  } else if (cleaned.includes("€")) {
-    currency = "EUR";
-  } else if (cleaned.includes("¥")) {
-    currency = "JPY";
-  } else if (cleaned.includes("₹")) {
-    currency = "INR";
-  }
-
-  if (currency !== "USD") {
-    console.log("Non-dollar currency acquired - check host??");
-  }
-
-  const numericMatch = cleaned.match(/(\d+(?:,\d+)*(?:\.\d+)?)/);
-  if (numericMatch) {
-    const amount = parseFloat(numericMatch[1].replace(/,/g, ""));
     return { amount, currency };
+  } catch {
+    return null;
   }
-
-  return null;
-}
-
-function cleanText(text: string): string {
-  return text
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ")
-    .trim();
-}
-
-export async function scrapeManyAmazon(
-  urls: string[]
-): Promise<ScrapingResult[]> {
-  const results: ScrapingResult[] = [];
-
-  for (const url of urls) {
-    const result = await scrapeAmazonPrice(url);
-    results.push(result);
-
-    // rate limits!
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-
-  return results;
 }
 
 export function extractASIN(url: string): string | null {
-  const asinMatch = url.match(/\/([A-Z0-9]{10})(?:\/|\?|$)/);
-  return asinMatch ? asinMatch[1] : null;
+  const match = url.match(/(?:dp|product|ASIN)\/([A-Z0-9]{10})/);
+  return match ? match[1] : null;
 }
 
-export function buildAmazonUrl(
-  asin: string,
-  domain: string = "amazon.com"
-): string {
+export function buildAmazonUrl(asin: string, domain = "amazon.com"): string {
   return `https://www.${domain}/dp/${asin}`;
 }
