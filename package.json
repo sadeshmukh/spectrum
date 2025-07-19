@@ -20,6 +20,7 @@
     "@types/react-dom": "^19.1.6",
     "astro": "^5.11.0",
     "auth-astro": "^4.2.0",
+    "chart.js": "^4.5.0",
     "https-proxy-agent": "^7.0.6",
     "p-limit": "^6.2.0",
     "react": "^19.1.0",

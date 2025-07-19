@@ -1,0 +1,461 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { getSession } from "auth-astro/server";
+import { db, Items, UserGuesses, eq, sql, desc } from "astro:db";
+
+const session = await getSession(Astro.request);
+
+if (!session) {
+  return Astro.redirect("/login");
+}
+
+const user = session.user!;
+
+// for now - allow both admin and regular users to view item stats
+// still segregate some data
+// check if data is hydrated on server - some might be visible to client even on non-admin
+const isAdmin = user.isAdmin;
+
+const { id } = Astro.params;
+const itemId = parseInt(id!);
+
+if (isNaN(itemId)) {
+  return Astro.redirect(isAdmin ? "/admin" : "/dashboard");
+}
+
+const item = await db.select().from(Items).where(eq(Items.id, itemId)).get();
+
+if (!item) {
+  return Astro.redirect(isAdmin ? "/admin" : "/dashboard");
+}
+
+const guesses = await db
+  .select()
+  .from(UserGuesses)
+  .where(eq(UserGuesses.itemId, itemId))
+  .orderBy(desc(UserGuesses.submittedAt));
+
+const totalGuesses = guesses.length;
+const averageGuess =
+  guesses.length > 0
+    ? guesses.reduce((sum, g) => sum + g.guess, 0) / guesses.length
+    : 0;
+const averageAccuracy =
+  guesses.length > 0
+    ? guesses.reduce((sum, g) => sum + (g.accuracy || 0), 0) / guesses.length
+    : 0;
+const bestAccuracy =
+  guesses.length > 0 ? Math.max(...guesses.map((g) => g.accuracy || 0)) : 0;
+
+// price distribution
+const priceRanges = [];
+const rangeSize = Math.max(1, Math.ceil(item.actualPrice! / 10));
+for (let i = 0; i < 10; i++) {
+  const min = i * rangeSize;
+  const max = (i + 1) * rangeSize;
+  const count = guesses.filter((g) => g.guess >= min && g.guess < max).length;
+  priceRanges.push({
+    range: `$${min}-$${max}`,
+    count,
+    percentage: guesses.length > 0 ? (count / guesses.length) * 100 : 0,
+  });
+}
+
+// accuracy distribution
+const accuracyRanges = [
+  { range: "0-20%", min: 0, max: 20 },
+  { range: "21-40%", min: 21, max: 40 },
+  { range: "41-60%", min: 41, max: 60 },
+  { range: "61-80%", min: 61, max: 80 },
+  { range: "81-100%", min: 81, max: 100 },
+];
+
+const accuracyDistribution = accuracyRanges.map((range) => {
+  const count = guesses.filter((g) => {
+    const accuracy = g.accuracy || 0;
+    return accuracy >= range.min && accuracy <= range.max;
+  }).length;
+  return {
+    range: range.range,
+    count,
+    percentage: guesses.length > 0 ? (count / guesses.length) * 100 : 0,
+  };
+});
+
+// recent guesses (timeline)
+const recentGuesses = guesses
+  .slice(0, 20)
+  .reverse()
+  .map((guess, index) => ({
+    index: index + 1,
+    guess: guess.guess,
+    accuracy: guess.accuracy || 0,
+    submittedAt: guess.submittedAt.toLocaleDateString(),
+  }));
+---
+
+<Layout title={`Item Stats - ${item.title || "Amazon Item"}`}>
+  <div class="min-h-screen bg-black">
+    <nav class="border-b border-gray-800 bg-card">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold text-white">SPECTRUM</h1>
+            <div class="flex items-center gap-2">
+              <div
+                class={`w-2 h-2 ${isAdmin ? "bg-red-500" : "bg-gray-500"} rounded-full`}
+              >
+              </div>
+              <span
+                class={`text-sm font-medium ${isAdmin ? "text-red-400" : "text-gray-400"}`}
+              >
+                ITEM STATS
+              </span>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <a
+              href={isAdmin ? "/admin" : "/dashboard"}
+              class="text-muted hover:text-white text-sm transition-colors"
+            >
+              ← Back to {isAdmin ? "Admin" : "Dashboard"}
+            </a>
+            <div class="flex items-center gap-2">
+              <img
+                class={`w-8 h-8 rounded-full ring-2 ${
+                  isAdmin ? "ring-red-500/30" : "ring-gray-500/30"
+                }`}
+                src={user.image}
+                alt={user.name}
+              />
+              <div class="flex flex-col">
+                <span class="text-white text-sm font-medium">{user.name}</span>
+                <span
+                  class={`text-xs ${isAdmin ? "text-red-400" : "text-gray-400"}`}
+                >
+                  {isAdmin ? "Administrator" : "User"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-6">
+      <div class="mb-6">
+        <h2 class="text-3xl font-bold text-white mb-2">Item Statistics</h2>
+        <p class="text-muted">
+          Detailed analytics for this item.
+          {
+            isAdmin && (
+              <span class="text-red-400">This is an admin-only view.</span>
+            )
+          }
+        </p>
+      </div>
+
+      <!-- item info -->
+      <div class="bg-card rounded-lg p-4 mb-6 border border-accent/10">
+        <div class="grid md:grid-cols-2 gap-6 items-center">
+          <div>
+            <h3 class="text-xl font-bold text-white mb-2">
+              {item.title || "Amazon Item"}
+            </h3>
+            <p class="text-muted mb-4">
+              Actual Price: <span class="text-green-400 font-bold"
+                >${item.actualPrice}</span
+              >
+            </p>
+            <a
+              href={item.link}
+              target="_blank"
+              class="inline-flex items-center text-accent hover:text-accent/80 transition-colors"
+            >
+              <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fill-rule="evenodd"
+                  d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
+                  clip-rule="evenodd"></path>
+              </svg>
+              View Original
+            </a>
+          </div>
+          {
+            item.photoUrl && (
+              <div class="flex justify-center">
+                <img
+                  src={item.photoUrl}
+                  alt={item.title || "Item"}
+                  class="w-48 h-48 object-cover rounded-lg border border-gray-700"
+                />
+              </div>
+            )
+          }
+        </div>
+      </div>
+
+      <!-- stats overview -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-card rounded-lg p-4 border border-accent/10">
+          <div class="text-center">
+            <p class="text-muted text-sm">Total Guesses</p>
+            <p class="text-2xl font-bold text-white">{totalGuesses}</p>
+          </div>
+        </div>
+        <div class="bg-card rounded-lg p-4 border border-accent/10">
+          <div class="text-center">
+            <p class="text-muted text-sm">Average Guess</p>
+            <p class="text-2xl font-bold text-white">
+              ${averageGuess.toFixed(2)}
+            </p>
+          </div>
+        </div>
+        <div class="bg-card rounded-lg p-4 border border-accent/10">
+          <div class="text-center">
+            <p class="text-muted text-sm">Average Accuracy</p>
+            <p class="text-2xl font-bold text-white">
+              {averageAccuracy.toFixed(1)}%
+            </p>
+          </div>
+        </div>
+        <div class="bg-card rounded-lg p-4 border border-accent/10">
+          <div class="text-center">
+            <p class="text-muted text-sm">Best Accuracy</p>
+            <p class="text-2xl font-bold text-white">
+              {bestAccuracy.toFixed(1)}%
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- charts -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <div class="bg-card rounded-lg p-4 border border-accent/10">
+          <h3 class="text-lg font-semibold text-white mb-3">
+            Price Distribution
+          </h3>
+          <div class="h-64">
+            <canvas id="priceChart"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-card rounded-lg p-4 border border-accent/10">
+          <h3 class="text-lg font-semibold text-white mb-3">
+            Accuracy Distribution
+          </h3>
+          <div class="h-64">
+            <canvas id="accuracyChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-card rounded-lg p-4 border border-accent/10">
+        <h3 class="text-lg font-semibold text-white mb-3">
+          Recent Guesses Timeline
+        </h3>
+        <div class="h-64">
+          <canvas id="timelineChart"></canvas>
+        </div>
+      </div>
+    </main>
+  </div>
+</Layout>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js" is:inline></script>
+<script define:vars={{ priceRanges, accuracyDistribution, recentGuesses, item }}
+>
+  // #region price distribution chart
+  const priceCtx = document.getElementById("priceChart").getContext("2d");
+  new Chart(priceCtx, {
+    type: "bar",
+    data: {
+      labels: priceRanges.map((r) => r.range),
+      datasets: [
+        {
+          label: "Number of Guesses",
+          data: priceRanges.map((r) => r.count),
+          backgroundColor: "rgba(16, 185, 129, 0.8)",
+          borderColor: "rgba(16, 185, 129, 1)",
+          borderWidth: 2,
+          borderRadius: 8,
+          borderSkipped: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {
+        duration: 1000,
+        easing: "easeOutQuart",
+      },
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: "rgba(75, 85, 99, 0.2)",
+          },
+          ticks: {
+            color: "#9CA3AF",
+          },
+        },
+        x: {
+          grid: {
+            color: "rgba(75, 85, 99, 0.2)",
+          },
+          ticks: {
+            color: "#9CA3AF",
+            maxRotation: 45,
+          },
+        },
+      },
+    },
+  });
+  // #endregion
+
+  // #region accuracy distribution chart
+  const accuracyCtx = document.getElementById("accuracyChart").getContext("2d");
+  new Chart(accuracyCtx, {
+    type: "doughnut",
+    data: {
+      labels: accuracyDistribution.map((r) => r.range),
+      datasets: [
+        {
+          data: accuracyDistribution.map((r) => r.count),
+          backgroundColor: [
+            "rgba(239, 68, 68, 0.8)",
+            "rgba(245, 158, 11, 0.8)",
+            "rgba(59, 130, 246, 0.8)",
+            "rgba(16, 185, 129, 0.8)",
+            "rgba(139, 92, 246, 0.8)",
+          ],
+          borderColor: [
+            "rgba(239, 68, 68, 1)",
+            "rgba(245, 158, 11, 1)",
+            "rgba(59, 130, 246, 1)",
+            "rgba(16, 185, 129, 1)",
+            "rgba(139, 92, 246, 1)",
+          ],
+          borderWidth: 2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {
+        duration: 1000,
+        animateRotate: true,
+        animateScale: true,
+      },
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: {
+            color: "#9CA3AF",
+            padding: 20,
+          },
+        },
+      },
+    },
+  });
+  // #endregion
+
+  // #region timeline chart
+  const timelineCtx = document.getElementById("timelineChart").getContext("2d");
+  new Chart(timelineCtx, {
+    type: "line",
+    data: {
+      labels: recentGuesses.map((g) => g.index),
+      datasets: [
+        {
+          label: "Guess Amount ($)",
+          data: recentGuesses.map((g) => g.guess),
+          borderColor: "rgba(16, 185, 129, 1)",
+          backgroundColor: "rgba(16, 185, 129, 0.1)",
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: "rgba(16, 185, 129, 1)",
+          pointBorderColor: "#fff",
+          pointBorderWidth: 2,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+        },
+        {
+          label: "Accuracy (%)",
+          data: recentGuesses.map((g) => g.accuracy),
+          borderColor: "rgba(59, 130, 246, 1)",
+          backgroundColor: "rgba(59, 130, 246, 0.1)",
+          borderWidth: 3,
+          fill: false,
+          tension: 0.4,
+          pointBackgroundColor: "rgba(59, 130, 246, 1)",
+          pointBorderColor: "#fff",
+          pointBorderWidth: 2,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          yAxisID: "y1",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {
+        duration: 1000,
+        easing: "easeOutQuart",
+      },
+      interaction: {
+        mode: "index",
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          labels: {
+            color: "#9CA3AF",
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: {
+            color: "rgba(75, 85, 99, 0.2)",
+          },
+          ticks: {
+            color: "#9CA3AF",
+          },
+        },
+        y: {
+          type: "linear",
+          display: true,
+          position: "left",
+          grid: {
+            color: "rgba(75, 85, 99, 0.2)",
+          },
+          ticks: {
+            color: "#9CA3AF",
+          },
+        },
+        y1: {
+          type: "linear",
+          display: true,
+          position: "right",
+          grid: {
+            drawOnChartArea: false,
+          },
+          ticks: {
+            color: "#9CA3AF",
+          },
+        },
+      },
+    },
+  });
+  // #endregion
+</script>

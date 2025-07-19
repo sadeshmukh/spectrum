@@ -3,7 +3,17 @@ import Layout from "../layouts/Layout.astro";
 import { getSession } from "auth-astro/server";
 import { SignOut } from "auth-astro/components";
 import AmazonScraper from "../components/AmazonScraper.tsx";
-import { db, Items, UserGuesses, count, desc } from "astro:db";
+import {
+  db,
+  Items,
+  UserGuesses,
+  Users,
+  count,
+  desc,
+  sql,
+  gte,
+  eq,
+} from "astro:db";
 
 const session = await getSession(Astro.request);
 
@@ -20,38 +30,80 @@ if (!user.isAdmin) {
 const totalItems = await db.select({ count: count() }).from(Items);
 const totalGuesses = await db.select({ count: count() }).from(UserGuesses);
 
+const totalUsers = await db.select({ count: count() }).from(Users);
+
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+const guessesToday = await db
+  .select({ count: count() })
+  .from(UserGuesses)
+  .where(gte(UserGuesses.submittedAt, today));
+
+const averageAccuracy = await db
+  .select({ avg: sql<number>`AVG(${UserGuesses.accuracy})` })
+  .from(UserGuesses)
+  .where(sql`${UserGuesses.accuracy} IS NOT NULL`);
+
+const activeUsers = await db
+  .select({ count: sql<number>`COUNT(DISTINCT ${UserGuesses.userId})` })
+  .from(UserGuesses)
+  .where(
+    gte(UserGuesses.submittedAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+  );
+
 const recentItems = await db
-  .select()
+  .select({
+    id: Items.id,
+    title: Items.title,
+    link: Items.link,
+    photoUrl: Items.photoUrl,
+    actualPrice: Items.actualPrice,
+    createdAt: Items.createdAt,
+  })
   .from(Items)
   .orderBy(desc(Items.createdAt))
-  .limit(10);
+  .limit(4);
 
 const recentGuessesData = await db
-  .select()
+  .select({
+    id: UserGuesses.id,
+    userId: UserGuesses.userId,
+    guess: UserGuesses.guess,
+    accuracy: UserGuesses.accuracy,
+    submittedAt: UserGuesses.submittedAt,
+    itemId: UserGuesses.itemId,
+    itemTitle: Items.title,
+  })
   .from(UserGuesses)
+  .leftJoin(Items, eq(UserGuesses.itemId, Items.id))
   .orderBy(desc(UserGuesses.submittedAt))
-  .limit(10);
+  .limit(5);
 
 const globalStats = {
-  totalUsers: 0, // placeholder
+  totalUsers: totalUsers[0]?.count || 0,
   totalGuesses: totalGuesses[0]?.count || 0,
   totalItems: totalItems[0]?.count || 0,
-  averageAccuracy: 0, // placeholder
-  guessesToday: 0, // placeholder
-  activeUsers: 0, // placeholder
+  averageAccuracy: averageAccuracy[0]?.avg || 0,
+  guessesToday: guessesToday[0]?.count || 0,
+  activeUsers: activeUsers[0]?.count || 0,
 };
 
 const recentGuesses = recentGuessesData.map((guess) => ({
-  userImage: "/default-avatar.png", // placeholder
+  userImage: "https://placehold.co/300x300",
   userName: guess.userId,
   result: `$${guess.guess}`,
+  accuracy: `${guess.accuracy || 0}%`,
   submittedAt: guess.submittedAt.toLocaleDateString(),
-  rank: 1, // placeholder
+  itemId: guess.itemId,
+  itemTitle: guess.itemTitle || "Amazon Item",
 }));
 
 const recentItemsFormatted = recentItems.map((item) => ({
   id: item.id.toString(),
+  title: item.title || "Amazon Item",
   link: item.link,
+  photoUrl: item.photoUrl,
   actualPrice: item.actualPrice,
   createdAt: item.createdAt.toLocaleDateString(),
 }));
@@ -98,8 +150,27 @@ const recentItemsFormatted = recentItems.map((item) => ({
     </nav>
 
     <main class="max-w-7xl mx-auto px-6 py-8">
-      <div class="mb-8">
-        <h2 class="text-3xl font-bold text-white mb-2">Admin Dashboard</h2>
+      <div class="mb-8 flex justify-between items-center">
+        <h2 class="text-3xl font-bold text-white">Admin Dashboard</h2>
+        <button
+          id="refresh-stats"
+          class="bg-accent text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent/90 transition-colors flex items-center gap-2"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            ></path>
+          </svg>
+          Refresh Stats
+        </button>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -313,7 +384,17 @@ const recentItemsFormatted = recentItems.map((item) => ({
                 {recentItemsFormatted.map((item) => (
                   <div class="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg">
                     <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center">
+                      {item.photoUrl ? (
+                        <img
+                          src={item.photoUrl}
+                          alt={item.title}
+                          class="w-8 h-8 rounded-lg object-cover"
+                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                        />
+                      ) : null}
+                      <div
+                        class={`w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center ${item.photoUrl ? "hidden" : ""}`}
+                      >
                         <svg
                           class="w-4 h-4 text-accent"
                           fill="none"
@@ -330,7 +411,7 @@ const recentItemsFormatted = recentItems.map((item) => ({
                       </div>
                       <div>
                         <p class="text-white text-sm font-medium">
-                          Amazon Item
+                          {item.title}
                         </p>
                         <p class="text-muted text-xs">
                           {item.actualPrice
@@ -341,13 +422,21 @@ const recentItemsFormatted = recentItems.map((item) => ({
                     </div>
                     <div class="text-right">
                       <p class="text-white text-sm">{item.createdAt}</p>
-                      <a
-                        href={item.link}
-                        target="_blank"
-                        class="text-accent text-xs hover:underline"
-                      >
-                        View Item
-                      </a>
+                      <div class="flex gap-2 mt-1">
+                        <a
+                          href={item.link}
+                          target="_blank"
+                          class="text-accent text-xs hover:underline"
+                        >
+                          View Item
+                        </a>
+                        <a
+                          href={`/item-stats/${item.id}`}
+                          class="text-blue-400 text-xs hover:underline"
+                        >
+                          View Stats
+                        </a>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -425,12 +514,34 @@ const recentItemsFormatted = recentItems.map((item) => ({
                       <p class="text-white text-sm font-medium">
                         {guess.userName}
                       </p>
-                      <p class="text-muted text-xs">Result: {guess.result}</p>
+                      <p class="text-muted text-xs">
+                        {guess.result} • {guess.accuracy} accuracy
+                      </p>
+                      <p class="text-muted text-xs">{guess.itemTitle}</p>
                     </div>
                   </div>
                   <div class="text-right">
                     <p class="text-white text-sm">{guess.submittedAt}</p>
-                    <p class="text-muted text-xs">#{guess.rank}</p>
+                    <p class="text-muted text-xs">{guess.accuracy}</p>
+                    <a
+                      href={`/item-stats/${guess.itemId}`}
+                      class="inline-flex items-center text-blue-400 hover:text-blue-300 transition-colors text-xs mt-1"
+                    >
+                      <svg
+                        class="w-3 h-3 mr-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                        />
+                      </svg>
+                      View Stats
+                    </a>
                   </div>
                 </div>
               ))}
@@ -441,3 +552,43 @@ const recentItemsFormatted = recentItems.map((item) => ({
     </main>
   </div>
 </Layout>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const refreshButton = document.getElementById(
+      "refresh-stats"
+    ) as HTMLButtonElement;
+
+    refreshButton?.addEventListener("click", async function () {
+      try {
+        refreshButton.disabled = true;
+        refreshButton.innerHTML = `
+          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Refreshing...
+        `;
+
+        const response = await fetch("/api/admin-stats");
+        const result = await response.json();
+
+        if (result.success) {
+          window.location.reload();
+        } else {
+          alert("Failed to refresh stats");
+        }
+      } catch (error) {
+        console.error("Error refreshing stats:", error);
+        alert("Error refreshing stats");
+      } finally {
+        refreshButton.disabled = false;
+        refreshButton.innerHTML = `
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Refresh Stats
+        `;
+      }
+    });
+  });
+</script>

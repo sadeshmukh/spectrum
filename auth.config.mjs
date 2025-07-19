@@ -31,6 +31,9 @@ export default defineConfig({
           })
           .returning()
           .get();
+        if (dbUser.isAdmin) {
+          console.log(`${user.email} is admin`);
+        }
       }
 
       user.id = dbUser.id;

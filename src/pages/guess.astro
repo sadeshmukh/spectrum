@@ -8,6 +8,8 @@ if (!session) {
   return Astro.redirect("/login");
 }
 
+const user = session.user!;
+
 let item;
 let errorMessage = null;
 
@@ -132,7 +134,7 @@ try {
                           clip-rule="evenodd"
                         />
                       </svg>
-                      View on Amazon
+                      View Original
                     </a>
                   </div>
                 </div>
@@ -240,14 +242,42 @@ try {
               </div>
             </div>
           </div>
-          <div class="mt-12 text-center">
+          <div class="mt-12 text-center space-y-4">
+            <div class="text-gray-400 mb-4">
+              <span id="countdown">3</span> seconds until next item...
+            </div>
             <button
               type="button"
               id="next-item"
-              class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 px-10 rounded-2xl transition-all duration-200 text-lg border-2 border-gray-700 hover:border-gray-600"
+              class="bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-10 rounded-2xl transition-all duration-200 text-lg border-2 border-green-600 hover:border-green-500"
             >
-              NEXT ITEM →
+              NEXT ITEM NOW →
             </button>
+            {
+              user.isAdmin && item?.id && (
+                <div class="pt-4">
+                  <a
+                    href={`/item-stats/${item.id}`}
+                    class="inline-flex items-center text-blue-400 hover:text-blue-300 transition-colors font-medium"
+                  >
+                    <svg
+                      class="w-5 h-5 mr-2"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      />
+                    </svg>
+                    View Item Statistics
+                  </a>
+                </div>
+              )
+            }
           </div>
         </div>
 
@@ -318,6 +348,7 @@ try {
     const actualPriceSpan = document.getElementById("actual-price");
     const accuracySpan = document.getElementById("accuracy");
     const amazonLink = document.getElementById("amazon-link");
+    const countdownSpan = document.getElementById("countdown");
 
     // Sync slider and input
     priceSlider?.addEventListener("input", () => {
@@ -383,6 +414,20 @@ try {
         }
         if (priceInput) priceInput.disabled = true;
         if (priceSlider) priceSlider.disabled = true;
+
+        // Auto-load next item after 3 seconds with countdown
+        let countdown = 3;
+        countdownInterval = setInterval(() => {
+          countdown--;
+          if (countdownSpan) countdownSpan.textContent = countdown.toString();
+
+          if (countdown <= 0) {
+            clearInterval(countdownInterval);
+            if (result.data.nextItem) {
+              window.location.reload();
+            }
+          }
+        }, 1000);
       } catch (error) {
         console.error("Error submitting guess:", error);
         alert("Error submitting guess. Please try again.");
@@ -391,7 +436,15 @@ try {
       }
     });
 
+    let countdownInterval = null;
+
     nextButton?.addEventListener("click", async () => {
+      // Clear countdown if running
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+
       loadingDiv?.classList.remove("hidden");
       if (nextButton) nextButton.disabled = true;
 

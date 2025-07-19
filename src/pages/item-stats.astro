@@ -1,0 +1,205 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { getSession } from "auth-astro/server";
+import { db, Items, UserGuesses, count, eq, sql, gte, desc } from "astro:db";
+
+const session = await getSession(Astro.request);
+
+if (!session) {
+  return Astro.redirect("/login");
+}
+
+const user = session.user!;
+
+if (!user.isAdmin) {
+  return Astro.redirect("/dashboard");
+}
+
+const itemId = Astro.url.searchParams.get("itemId");
+
+if (!itemId) {
+  return Astro.redirect("/admin");
+}
+
+const item = await db
+  .select()
+  .from(Items)
+  .where(eq(Items.id, parseInt(itemId)))
+  .get();
+
+if (!item) {
+  return Astro.redirect("/admin");
+}
+
+const totalGuesses = await db
+  .select({ count: count() })
+  .from(UserGuesses)
+  .where(eq(UserGuesses.itemId, parseInt(itemId)));
+
+const averageGuess = await db
+  .select({ avg: sql<number>`AVG(${UserGuesses.guess})` })
+  .from(UserGuesses)
+  .where(eq(UserGuesses.itemId, parseInt(itemId)));
+
+const averageAccuracy = await db
+  .select({ avg: sql<number>`AVG(${UserGuesses.accuracy})` })
+  .from(UserGuesses)
+  .where(eq(UserGuesses.itemId, parseInt(itemId)));
+
+const guessDistribution = await db
+  .select({
+    range: sql<string>`CASE 
+      WHEN ${UserGuesses.guess} < ${item.actualPrice! * 0.5} THEN 'Under 50%'
+      WHEN ${UserGuesses.guess} < ${item.actualPrice! * 0.8} THEN '50-80%'
+      WHEN ${UserGuesses.guess} < ${item.actualPrice! * 1.2} THEN '80-120%'
+      WHEN ${UserGuesses.guess} < ${item.actualPrice! * 1.5} THEN '120-150%'
+      ELSE 'Over 150%'
+    END`,
+    count: count(),
+  })
+  .from(UserGuesses)
+  .where(eq(UserGuesses.itemId, parseInt(itemId))).groupBy(sql`CASE 
+    WHEN ${UserGuesses.guess} < ${item.actualPrice! * 0.5} THEN 'Under 50%'
+    WHEN ${UserGuesses.guess} < ${item.actualPrice! * 0.8} THEN '50-80%'
+    WHEN ${UserGuesses.guess} < ${item.actualPrice! * 1.2} THEN '80-120%'
+    WHEN ${UserGuesses.guess} < ${item.actualPrice! * 1.5} THEN '120-150%'
+    ELSE 'Over 150%'
+  END`);
+
+const recentGuesses = await db
+  .select({
+    userId: UserGuesses.userId,
+    guess: UserGuesses.guess,
+    accuracy: UserGuesses.accuracy,
+    submittedAt: UserGuesses.submittedAt,
+  })
+  .from(UserGuesses)
+  .where(eq(UserGuesses.itemId, parseInt(itemId)))
+  .orderBy(desc(UserGuesses.submittedAt))
+  .limit(20);
+
+const stats = {
+  totalGuesses: totalGuesses[0]?.count || 0,
+  averageGuess: averageGuess[0]?.avg || 0,
+  averageAccuracy: averageAccuracy[0]?.avg || 0,
+  guessDistribution: guessDistribution.map((d) => ({
+    range: d.range,
+    count: d.count,
+    percentage: totalGuesses[0]?.count
+      ? Math.round((d.count / totalGuesses[0].count) * 100)
+      : 0,
+  })),
+  recentGuesses: recentGuesses.map((g) => ({
+    userId: g.userId,
+    guess: g.guess,
+    accuracy: g.accuracy || 0,
+    submittedAt: g.submittedAt.toLocaleDateString(),
+  })),
+};
+---
+
+<Layout title="Item Stats - Spectrum">
+  <div class="min-h-screen bg-black">
+    <nav
+      class="border-b border-red-500/20 bg-gradient-to-r from-red-950/20 to-red-900/20"
+    >
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold text-white">SPECTRUM</h1>
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+              <span class="text-red-400 text-sm font-medium">ITEM STATS</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <a
+              href="/admin"
+              class="text-muted hover:text-white text-sm transition-colors"
+            >
+              back to admin
+            </a>
+            <div class="flex items-center gap-2">
+              <img
+                class="w-8 h-8 rounded-full ring-2 ring-red-500/30"
+                src={user.image}
+                alt={user.name}
+              />
+              <div class="flex flex-col">
+                <span class="text-white text-sm font-medium">{user.name}</span>
+                <span class="text-red-400 text-xs">Administrator</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+      <div class="mb-8">
+        <h2 class="text-3xl font-bold text-white mb-2">Item Statistics</h2>
+        <p class="text-muted text-lg">
+          Stats for: <span class="text-accent font-semibold">{item.title}</span>
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div class="bg-card rounded-lg p-6 border border-accent/10">
+          <h3 class="text-lg font-semibold text-white mb-4">Overview</h3>
+          <ul class="space-y-2">
+            <li class="text-white">
+              Total Guesses: <span class="font-bold">{stats.totalGuesses}</span>
+            </li>
+            <li class="text-white">
+              Average Guess: <span class="font-bold"
+                >${stats.averageGuess.toFixed(2)}</span>
+            </li>
+            <li class="text-white">
+              Average Accuracy: <span class="font-bold"
+                >{stats.averageAccuracy.toFixed(1)}%</span>
+            </li>
+            <li class="text-white">
+              Actual Price: <span class="font-bold">${item.actualPrice}</span>
+            </li>
+          </ul>
+        </div>
+        <div class="bg-card rounded-lg p-6 border border-accent/10">
+          <h3 class="text-lg font-semibold text-white mb-4">
+            Guess Distribution
+          </h3>
+          <ul class="space-y-2">
+            {
+              stats.guessDistribution.map((d) => (
+                <li class="flex justify-between">
+                  <span class="text-white">{d.range}</span>
+                  <span class="text-accent font-bold">
+                    {d.count} ({d.percentage}%)
+                  </span>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+      </div>
+
+      <div class="bg-card rounded-lg p-6 border border-accent/10 mb-8">
+        <h3 class="text-lg font-semibold text-white mb-4">Recent Guesses</h3>
+        <div class="space-y-2">
+          {
+            stats.recentGuesses.map((g) => (
+              <div class="flex justify-between items-center">
+                <span class="text-white">{g.userId}</span>
+                <span class="text-muted">${g.guess}</span>
+                <span class="text-accent">{g.accuracy}%</span>
+                <span class="text-xs text-gray-400">{g.submittedAt}</span>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      <!-- You can add chart.js or another charting library here for more advanced visualizations -->
+    </main>
+  </div>
+</Layout>
+

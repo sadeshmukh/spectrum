@@ -10,6 +10,7 @@ declare module "astro" {
 
 const auth = defineMiddleware(async (context, next) => {
   const session = await getSession(context.request);
+  // @ts-expect-error - session untyped
   context.locals.session = session;
   return next();
 });
