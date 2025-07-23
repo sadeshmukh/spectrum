@@ -8,14 +8,8 @@ export const GET: APIRoute = async ({ request, url }) => {
 
     if (!session?.user?.isAdmin) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Unauthorized",
-        }),
-        {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        }
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -23,14 +17,8 @@ export const GET: APIRoute = async ({ request, url }) => {
 
     if (!itemId) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Item ID required",
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
+        JSON.stringify({ success: false, error: "Item ID required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -42,14 +30,8 @@ export const GET: APIRoute = async ({ request, url }) => {
 
     if (!item) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Item not found",
-        }),
-        {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        }
+        JSON.stringify({ success: false, error: "Item not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -159,29 +141,17 @@ export const GET: APIRoute = async ({ request, url }) => {
         accuracy: g.accuracy || 0,
         submittedAt: g.submittedAt.toISOString(),
       })),
-    };
+    } as const;
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: stats,
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ success: true, data: stats }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Item Stats API Error:", error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: "Internal server error",
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
+      JSON.stringify({ success: false, error: "Internal server error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 };

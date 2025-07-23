@@ -33,7 +33,7 @@ export default function AmazonScraper() {
     setViewState("loading");
 
     try {
-      const response = await fetch("/api/scrape-amazon", {
+      const response = await fetch("/api/admin/scrape", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -63,7 +63,7 @@ export default function AmazonScraper() {
     setIsConfirming(true);
 
     try {
-      const response = await fetch("/api/add-item", {
+      const response = await fetch("/api/admin/add", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

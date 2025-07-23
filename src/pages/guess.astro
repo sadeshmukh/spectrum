@@ -15,7 +15,7 @@ let errorMessage = null;
 
 try {
   const baseUrl = Astro.url.origin;
-  const response = await fetch(`${baseUrl}/api/get-next`, {
+  const response = await fetch(`${baseUrl}/api/item/next`, {
     credentials: "include",
     headers: {
       Cookie: Astro.request.headers.get("cookie") || "",
@@ -375,7 +375,7 @@ try {
       if (submitButton) submitButton.disabled = true;
 
       try {
-        const response = await fetch("/api/submit-guess", {
+        const response = await fetch("/api/item/submit", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -448,7 +448,7 @@ try {
       if (nextButton) nextButton.disabled = true;
 
       try {
-        const response = await fetch("/api/next-item", {
+        const response = await fetch("/api/item/next", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

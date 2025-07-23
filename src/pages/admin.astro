@@ -569,7 +569,7 @@ const recentItemsFormatted = recentItems.map((item) => ({
           Refreshing...
         `;
 
-        const response = await fetch("/api/admin-stats");
+        const response = await fetch("/api/admin/stats");
         const result = await response.json();
 
         if (result.success) {
