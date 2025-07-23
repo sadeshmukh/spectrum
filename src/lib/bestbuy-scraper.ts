@@ -5,6 +5,8 @@ interface BestBuyProduct {
   image: string | null;
 }
 
+import { USER_AGENT } from "./constants";
+
 interface ScrapingResult {
   success: boolean;
   data: BestBuyProduct | null;
@@ -12,7 +14,7 @@ interface ScrapingResult {
 }
 
 const USER_AGENTS = [
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  USER_AGENT,
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Safari/605.1.15",
@@ -65,7 +67,7 @@ export async function scrapeBestBuyPrice(
           };
         }
 
-        const product = parseBestBuyHTML(html);
+        const product = await parseBestBuyHTML(html);
         if (!product.title && !product.price) {
           if (attempt < retries) continue;
           return {
@@ -108,7 +110,7 @@ function isValidBestBuyUrl(url: string): boolean {
   }
 }
 
-function parseBestBuyHTML(html: string): BestBuyProduct {
+async function parseBestBuyHTML(html: string): Promise<BestBuyProduct> {
   const product: BestBuyProduct = {
     title: "",
     price: null,
@@ -122,7 +124,7 @@ function parseBestBuyHTML(html: string): BestBuyProduct {
     html.match(/<h1[^>]*>([^<]+)<\/h1>/i) ||
     html.match(/<title[^>]*>([^<]+)<\/title>/i);
   if (titleMatch) {
-    product.title = titleMatch[1].trim();
+    product.title = decodeHTMLEntities(titleMatch[1].trim());
   }
 
   // Extract price using multiple patterns
@@ -146,16 +148,54 @@ function parseBestBuyHTML(html: string): BestBuyProduct {
     }
   }
 
-  // Extract image
-  const imageMatch =
-    html.match(/class="[^"]*product-image[^"]*"[^>]*src="([^"]+)"/i) ||
-    html.match(/class="[^"]*image[^"]*"[^>]*src="([^"]+)"/i) ||
-    html.match(/<img[^>]*src="([^"]*\.(?:jpg|jpeg|png|webp))"/i);
-  if (imageMatch) {
-    product.image = imageMatch[1];
+  // bestbuy uses URL parameters to determine image size
+  const imagePattern =
+    /src="(https:\/\/pisces\.bbystatic\.com\/image2\/BestBuy_US\/images\/products\/[^"]+\.jpg[^"]*)"/gi;
+
+  const allMatches = [...html.matchAll(imagePattern)];
+
+  const sortedImages = allMatches
+    .map((match) => match[1])
+    .filter((url) => {
+      const heightMatch = url.match(/maxHeight=(\d+)/);
+      return heightMatch && parseInt(heightMatch[1]) > 128;
+    })
+    .sort((a, b) => {
+      const heightA = parseInt(a.match(/maxHeight=(\d+)/)?.[1] || "0");
+      const heightB = parseInt(b.match(/maxHeight=(\d+)/)?.[1] || "0");
+      return heightB - heightA;
+    });
+
+  if (sortedImages.length > 0) {
+    product.image = sortedImages[0];
   }
 
   return product;
+}
+
+function decodeHTMLEntities(text: string): string {
+  const htmlEntities: { [key: string]: string } = {
+    "&quot;": '"',
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&apos;": "'",
+    "&nbsp;": " ",
+    "&copy;": "©",
+    "&reg;": "®",
+    "&trade;": "™",
+    "&hellip;": "…",
+    "&mdash;": "—",
+    "&ndash;": "–",
+    "&lsquo;": "'",
+    "&rsquo;": "'",
+    "&ldquo;": '"',
+    "&rdquo;": '"',
+  };
+
+  return text.replace(/&[a-zA-Z0-9#]+;/g, (entity) => {
+    return htmlEntities[entity] || entity;
+  });
 }
 
 function parsePrice(

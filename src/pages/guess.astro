@@ -103,11 +103,10 @@ try {
                       <img
                         src={
                           item.photoUrl ||
-                          "https://via.placeholder.com/400x300?text=Product+Image"
+                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239CA3AF' font-family='monospace' font-size='16'%3EProduct Image%3C/text%3E%3C/svg%3E"
                         }
                         alt={item.title}
                         class="w-full h-80 object-cover rounded-xl"
-                        onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Available'"
                       />
                     </div>
                   </div>

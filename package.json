@@ -10,23 +10,31 @@
     "populate:amazon": "tsx scripts/amazon-populate.ts",
     "populate:fakestore": "tsx scripts/fakestore-populate.ts",
     "populate:dummyjson": "tsx scripts/dummyjson-populate.ts",
-    "populate:mock": "tsx scripts/mock-populate.ts"
+    "populate:mock": "tsx scripts/mock-populate.ts",
+    "populate:bestbuy": "tsx scripts/bestbuy-populate.ts"
   },
   "dependencies": {
     "@astrojs/db": "^0.15.0",
     "@astrojs/node": "^9.3.0",
     "@astrojs/react": "^4.3.0",
     "@auth/core": "^0.37.4",
+    "@aws-sdk/client-s3": "^3.850.0",
+    "@aws-sdk/s3-request-presigner": "^3.850.0",
     "@tailwindcss/vite": "^4.1.11",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "astro": "^5.11.0",
     "auth-astro": "^4.2.0",
     "chart.js": "^4.5.0",
+    "dotenv": "^17.2.0",
     "https-proxy-agent": "^7.0.6",
     "p-limit": "^6.2.0",
+    "progress": "^2.0.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwindcss": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/progress": "^2.0.7"
   }
 }

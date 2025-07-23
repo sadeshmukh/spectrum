@@ -8,6 +8,13 @@ interface ImportMetaEnv {
   readonly ADMIN_EMAIL: string;
   readonly AUTH_SECRET: string;
   readonly AUTH_TRUST_HOST: string;
+  readonly CLOUDFLARE_ACCOUNT_ID: string;
+  readonly CLOUDFLARE_API_TOKEN: string;
+  readonly CLOUDFLARE_R2_BUCKET_NAME: string;
+  readonly CLOUDFLARE_R2_PUBLIC_DOMAIN?: string;
+  readonly AWS_ACCESS_KEY_ID: string;
+  readonly AWS_SECRET_ACCESS_KEY: string;
+  readonly AWS_REGION: string;
 }
 
 interface ImportMeta {

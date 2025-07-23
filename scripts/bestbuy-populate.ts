@@ -1,8 +1,9 @@
 import { scrapeBestBuyPrice } from "../src/lib/bestbuy-scraper";
+import { uploadToCloudflareR2 } from "../src/lib/cloudflare-r2";
 import { writeFile } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
-import pLimit from "p-limit";
+import ProgressBar from "progress";
 
 const SEARCH_TERMS = [
   "laptop",
@@ -16,14 +17,16 @@ const SEARCH_TERMS = [
   "keyboard",
   "mouse",
   "speaker",
-  "microphone",
-  "router",
-  "printer",
-  "scanner",
+  // "microphone",
+  // "router",
+  // "printer",
+  // "scanner",
 ];
 
-const CONCURRENCY = 2;
-const limit = pLimit(CONCURRENCY);
+// const TOTAL_SEARCH_URLS = 3;
+// ^ for testing, to retrieve non stale items
+const TOTAL_SEARCH_URLS = SEARCH_TERMS.length;
+const MAX_PRODUCT_URLS = 5;
 
 const USER_AGENTS = [
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
@@ -38,11 +41,6 @@ async function delay(min: number, max: number) {
   return new Promise((resolve) => setTimeout(resolve, delayTime));
 }
 
-async function longerDelay() {
-  const delayTime = 20000 + Math.random() * 40000;
-  return new Promise((resolve) => setTimeout(resolve, delayTime));
-}
-
 async function generateSearchUrls(count = 20) {
   return Array.from({ length: count }, () => {
     const term = SEARCH_TERMS[Math.floor(Math.random() * SEARCH_TERMS.length)];
@@ -54,7 +52,11 @@ async function generateSearchUrls(count = 20) {
 
 async function extractProductUrls(searchUrl: string): Promise<string[]> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     const response = await fetch(searchUrl, {
+      signal: controller.signal,
       headers: {
         "User-Agent": getRandomUserAgent(),
         Accept:
@@ -75,6 +77,8 @@ async function extractProductUrls(searchUrl: string): Promise<string[]> {
       },
     });
 
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       throw new Error(`HTTP error: ${response.status}`);
     }
@@ -83,24 +87,30 @@ async function extractProductUrls(searchUrl: string): Promise<string[]> {
 
     const urlSet = new Set<string>();
 
-    const skuMatches = html.match(/data-sku="([A-Z0-9]+)"/g) || [];
+    const productUrlMatches = html.matchAll(
+      /href="(https:\/\/www\.bestbuy\.com\/site\/[^"]*\/[A-Z0-9]+\.p\?skuId=[A-Z0-9]+)"/g
+    );
 
-    for (const match of skuMatches) {
-      const sku = match.match(/data-sku="([A-Z0-9]+)"/)![1];
-      urlSet.add(`https://www.bestbuy.com/site/${sku}`);
+    for (const [, url] of productUrlMatches) {
+      urlSet.add(url);
     }
 
-    const linkMatches = html.matchAll(
-      /href="(\/[^"]*\/(?:site|p|product)\/[A-Z0-9]+[^"]*)"/g
+    const relativeUrlMatches = html.matchAll(
+      /href="(\/site\/[^"]*\/[A-Z0-9]+\.p\?skuId=[A-Z0-9]+)"/g
     );
-    for (const [, path] of linkMatches) {
-      urlSet.add(`https://www.bestbuy.com${path.split("?")[0]}`);
+
+    for (const [, path] of relativeUrlMatches) {
+      urlSet.add(`https://www.bestbuy.com${path}`);
     }
 
     const urls = [...urlSet].slice(0, 5);
     return urls;
   } catch (error) {
-    console.error(`Failed to extract products from ${searchUrl}:`, error);
+    if (error instanceof Error && error.name === "AbortError") {
+      console.error(`Timeout extracting products from ${searchUrl}`);
+    } else {
+      console.error(`Failed to extract products from ${searchUrl}:`, error);
+    }
     return [];
   }
 }
@@ -110,62 +120,6 @@ interface ScrapedItem {
   photoUrl: string | undefined;
   title: string | undefined;
   actualPrice: number | undefined;
-}
-
-async function scrapeProduct(productUrl: string): Promise<ScrapedItem | null> {
-  try {
-    await delay(8000, 20000);
-
-    const result = await scrapeBestBuyPrice(productUrl);
-
-    if (result.success && result.data) {
-      const { title, price, image: photoUrl } = result.data;
-      return {
-        link: productUrl,
-        photoUrl: photoUrl || undefined,
-        title: title || undefined,
-        actualPrice: price || undefined,
-      };
-    } else {
-      return null;
-    }
-  } catch (error) {
-    console.error(`Failed to process product ${productUrl}:`, error);
-    return null;
-  }
-}
-
-async function processSearchUrl(
-  searchUrl: string,
-  items: ScrapedItem[],
-  stats: { success: number; failure: number }
-) {
-  try {
-    const productUrls = await extractProductUrls(searchUrl);
-
-    if (productUrls.length === 0) {
-      return;
-    }
-
-    const scrapePromises = productUrls.map((url) =>
-      limit(() => scrapeProduct(url))
-    );
-
-    const results = await Promise.all(scrapePromises);
-
-    const successfulItems = results.filter(
-      (item): item is ScrapedItem => item !== null
-    );
-
-    items.push(...successfulItems);
-    stats.success += successfulItems.length;
-    stats.failure += results.length - successfulItems.length;
-
-    await longerDelay();
-  } catch (error) {
-    console.error(`Failed to process search ${searchUrl}:`, error);
-    stats.failure++;
-  }
 }
 
 async function writeScrapedData(items: ScrapedItem[]) {
@@ -187,52 +141,101 @@ export const scrapedItems = ${JSON.stringify(validItems, null, 2)} as const;
 `;
 
   await writeFile(outputPath, fileContent, "utf-8");
-  console.log(`\n💾 Wrote ${validItems.length} valid items to ${outputPath}`);
+  console.log(`\nWrote ${validItems.length} valid items to ${outputPath}`);
+  console.log(
+    `Items with images: ${validItems.filter((item) => item.photoUrl).length}`
+  );
+  console.log(
+    `Items without images: ${
+      validItems.filter((item) => !item.photoUrl).length
+    }`
+  );
 }
 
 async function main() {
   try {
     console.log("🚀 Starting BestBuy product collection...\n");
 
-    const mainLimit = pLimit(CONCURRENCY);
     const items: ScrapedItem[] = [];
     const stats = { success: 0, failure: 0 };
 
-    const searchUrls = await generateSearchUrls(3);
+    const searchUrls = await generateSearchUrls(
+      Math.min(TOTAL_SEARCH_URLS, SEARCH_TERMS.length)
+    );
+
+    console.log(`Generated ${searchUrls.length} search URLs`);
+
+    const searchProgress = new ProgressBar(
+      "Processing search :current/:total [:bar] :percent :etas",
+      {
+        complete: "█",
+        incomplete: "░",
+        width: 40,
+        total: searchUrls.length,
+      }
+    );
 
     for (const searchUrl of searchUrls) {
       try {
-        const productUrls = await extractProductUrls(searchUrl);
+        console.log(`\nExtracting product URLs from: ${searchUrl}`);
+        const productUrls = (await extractProductUrls(searchUrl)).slice(
+          0,
+          MAX_PRODUCT_URLS
+        );
+        console.log(`Found ${productUrls.length} product URLs`);
 
         if (productUrls.length === 0) {
+          searchProgress.tick();
           continue;
         }
 
-        const productPromises = productUrls.map((url) =>
-          mainLimit(async () => {
-            try {
-              await delay(8000, 20000);
-              const result = await scrapeBestBuyPrice(url);
-
-              if (result.success && result.data) {
-                const { title, price, image: photoUrl } = result.data;
-                return {
-                  link: url,
-                  photoUrl: photoUrl || undefined,
-                  title: title || undefined,
-                  actualPrice: price || undefined,
-                };
-              } else {
-                return null;
-              }
-            } catch (error) {
-              console.error(`Error scraping ${url}:`, error);
-              return null;
-            }
-          })
+        const productProgress = new ProgressBar(
+          "  Scraping products :current/:total [:bar] :percent :etas",
+          {
+            complete: "█",
+            incomplete: "░",
+            width: 30,
+            total: productUrls.length,
+          }
         );
 
-        const results = await Promise.all(productPromises);
+        const results: (ScrapedItem | null)[] = [];
+
+        for (const url of productUrls) {
+          try {
+            await delay(1000, 2000);
+            const result = await scrapeBestBuyPrice(url);
+
+            if (result.success && result.data) {
+              const { title, price, image: photoUrl } = result.data;
+
+              let cloudflareImageUrl: string | undefined;
+              if (photoUrl) {
+                try {
+                  cloudflareImageUrl = await uploadToCloudflareR2(photoUrl);
+                } catch (uploadError) {
+                  console.error(`Failed to upload image: ${uploadError}`);
+                  cloudflareImageUrl = undefined;
+                }
+              }
+
+              const item: ScrapedItem = {
+                link: url,
+                photoUrl: cloudflareImageUrl,
+                title: title || undefined,
+                actualPrice: price || undefined,
+              };
+              results.push(item);
+            } else {
+              results.push(null);
+            }
+            productProgress.tick();
+          } catch (error) {
+            console.error(`\nError scraping ${url}:`, error);
+            results.push(null);
+            productProgress.tick();
+          }
+        }
 
         const successfulItems = results.filter(
           (item): item is ScrapedItem => item !== null
@@ -242,10 +245,12 @@ async function main() {
         stats.success += successfulItems.length;
         stats.failure += results.length - successfulItems.length;
 
-        await longerDelay();
+        searchProgress.tick();
+        await delay(5000, 10000);
       } catch (searchError) {
-        console.error(`Error processing search ${searchUrl}:`, searchError);
+        console.error(`\nError processing search ${searchUrl}:`, searchError);
         stats.failure++;
+        searchProgress.tick();
       }
     }
 
@@ -255,7 +260,10 @@ async function main() {
 
     await writeScrapedData(items);
 
-    console.log("\n✅ Product collection completed successfully!");
+    console.log("\nProduct collection completed successfully!");
+    console.log(
+      `Summary: ${stats.success} successful, ${stats.failure} failed`
+    );
   } catch (error) {
     console.error("=== Fatal Error ===");
     console.error(error);
