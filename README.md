@@ -1,52 +1,116 @@
-# Astro Starter Kit: Basics
+# Spectrum
 
-```sh
-npm create astro@latest -- --template basics
+A guessing game built with Astro, Turso, and Cloudflare R2.
+
+## Setup
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/sadeshmukh/spectrum.git
+cd spectrum
+npm install
 ```
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/basics)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/basics)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/basics/devcontainer.json)
+### 2. GitHub OAuth setup
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Create a new OAuth App:
+   - Name: Spectrum
+   - Homepage: `http://localhost:4321`
+   - Callback: `http://localhost:4321/api/auth/callback/github`
+3. Copy the Client ID and Client Secret
 
-![just-the-basics](https://github.com/withastro/astro/assets/2244813/a0a5533c-a856-4198-8470-2d67b1d7c554)
+### 3. Environment variables
 
-## 🚀 Project Structure
+Copy the example file and fill in your values:
 
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-│   └── favicon.svg
-├── src
-│   ├── assets
-│   │   └── astro.svg
-│   ├── components
-│   │   └── Welcome.astro
-│   ├── layouts
-│   │   └── Layout.astro
-│   └── pages
-│       └── index.astro
-└── package.json
+```bash
+cp env.example .env
 ```
 
-To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
+Required variables:
 
-## 🧞 Commands
+```env
+# GitHub OAuth
+GITHUB_CLIENT_ID=your_client_id
+GITHUB_CLIENT_SECRET=your_client_secret
 
-All commands are run from the root of the project, from a terminal:
+# Auth
+AUTH_SECRET=your_random_secret_32_chars_min
+AUTH_TRUST_HOST=true
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+# Admin access
+ADMIN_EMAIL=your_github_email
 
-## 👀 Want to learn more?
+# Database (optional for local dev)
+ASTRO_DB_REMOTE_URL=libsql://your-db.turso.io
+ASTRO_DB_APP_TOKEN=your_token
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+# Storage (optional for local dev)
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+AWS_REGION=auto
+```
+
+Generate AUTH_SECRET: `openssl rand -hex 32`
+
+### 4. Database setup (optional)
+
+For production, set up Turso:
+
+```bash
+curl -sLf https://get.tur.so/install.sh | bash
+
+turso auth login
+turso db create spectrum
+
+# more details
+turso db show spectrum
+turso db tokens create spectrum
+```
+
+Update your `.env` with the connection details, then push the schema:
+
+```bash
+npm run db:push:schema
+```
+
+Optionally seed the database with initial data:
+
+```bash
+npm run db:seed
+```
+
+### 5. Run locally
+
+```bash
+npm run dev
+```
+
+Visit http://localhost:4321 and sign in with GitHub.
+
+## Usage
+
+- **Regular users**: Sign in and play the guessing game
+- **Admins**: Use the admin panel to add new items (requires matching ADMIN_EMAIL)
+
+## Scripts
+
+- `npm run dev` - Local development
+- `npm run build` - Production build
+- `npm run db:push:schema` - Sync schema to remote database
+- `npm run db:seed` - Execute seed file against remote database
+- `npm run populate:*` - Seed data scrapers (amazon, fakestore, dummyjson, mock, bestbuy)
+
+## Deployment
+
+1. Set up Turso database (see Database setup above)
+2. Configure environment variables
+3. Run `npm run db:push:schema`
+4. Optionally run `npm run db:seed` to populate initial data
+5. Deploy to your preferred platform
+
+## License
+
+MIT
