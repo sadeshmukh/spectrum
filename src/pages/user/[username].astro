@@ -1,0 +1,187 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { db, Users, UserGuesses, Items, count, eq, sql, desc } from "astro:db";
+
+const { username } = Astro.params;
+
+if (!username) {
+  return Astro.redirect("/");
+}
+
+const user = await db
+  .select()
+  .from(Users)
+  .where(eq(Users.publicUsername, username))
+  .get();
+
+if (!user || !user.isPublic) {
+  return Astro.redirect("/");
+}
+
+const totalGuesses = await db
+  .select({ count: count() })
+  .from(UserGuesses)
+  .where(eq(UserGuesses.userId, user.email));
+
+const bestAccuracy = await db
+  .select({ max: sql<number>`MAX(${UserGuesses.accuracy})` })
+  .from(UserGuesses)
+  .where(eq(UserGuesses.userId, user.email));
+
+const averageAccuracy = await db
+  .select({ avg: sql<number>`AVG(${UserGuesses.accuracy})` })
+  .from(UserGuesses)
+  .where(eq(UserGuesses.userId, user.email));
+
+const recentGuesses = await db
+  .select({
+    id: UserGuesses.id,
+    guess: UserGuesses.guess,
+    accuracy: UserGuesses.accuracy,
+    submittedAt: UserGuesses.submittedAt,
+    itemId: UserGuesses.itemId,
+    itemTitle: Items.title,
+  })
+  .from(UserGuesses)
+  .leftJoin(Items, eq(UserGuesses.itemId, Items.id))
+  .where(eq(UserGuesses.userId, user.email))
+  .orderBy(desc(UserGuesses.submittedAt))
+  .limit(10);
+
+const userStats = {
+  totalGuesses: totalGuesses[0]?.count || 0,
+  bestAccuracy: bestAccuracy[0]?.max || 0,
+  averageAccuracy: averageAccuracy[0]?.avg || 0,
+  recentGuesses: recentGuesses.map((guess) => ({
+    id: guess.id,
+    guess: guess.guess,
+    accuracy: guess.accuracy || 0,
+    submittedAt: guess.submittedAt.toLocaleDateString(),
+    itemTitle: guess.itemTitle || "Amazon Item",
+  })),
+};
+---
+
+<Layout title={`${user.publicUsername} - Spectrum`}>
+  <div class="min-h-screen bg-black">
+    <nav class="border-b border-gray-800 bg-card">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold text-white">SPECTRUM</h1>
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 bg-gray-500 rounded-full"></div>
+
+              <span class="text-gray-400 text-sm font-medium"
+                >PUBLIC PROFILE</span
+              >
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <a
+              href="/"
+              class="text-muted hover:text-white text-sm transition-colors"
+            >
+              ← Back to Home
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-6 py-8">
+      <div class="mb-8">
+        <div class="flex items-center gap-4 mb-4">
+          {
+            user.image && (
+              <img
+                src={user.image}
+                alt={user.publicUsername}
+                class="w-16 h-16 rounded-full ring-2 ring-accent/30"
+              />
+            )
+          }
+          <div>
+            <h2 class="text-3xl font-bold text-white">{user.publicUsername}</h2>
+            <p class="text-muted">Public Profile</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-card rounded-lg p-6 border border-accent/10">
+          <div class="text-center">
+            <p class="text-muted text-sm">Total Guesses</p>
+            <p class="text-3xl font-bold text-white">
+              {userStats.totalGuesses}
+            </p>
+          </div>
+        </div>
+        <div class="bg-card rounded-lg p-6 border border-accent/10">
+          <div class="text-center">
+            <p class="text-muted text-sm">Best Accuracy</p>
+            <p class="text-3xl font-bold text-white">
+              {userStats.bestAccuracy.toFixed(1)}%
+            </p>
+          </div>
+        </div>
+        <div class="bg-card rounded-lg p-6 border border-accent/10">
+          <div class="text-center">
+            <p class="text-muted text-sm">Average Accuracy</p>
+            <p class="text-3xl font-bold text-white">
+              {userStats.averageAccuracy.toFixed(1)}%
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-card rounded-lg p-6 border border-accent/10">
+        <h3 class="text-lg font-semibold text-white mb-4">Recent Activity</h3>
+        {
+          userStats.recentGuesses.length === 0 ? (
+            <div class="text-center py-8">
+              <div class="w-12 h-12 bg-muted/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg
+                  class="w-6 h-6 text-muted"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+              </div>
+              <p class="text-muted text-sm">No recent activity</p>
+            </div>
+          ) : (
+            <div class="space-y-3">
+              {userStats.recentGuesses.map((guess) => (
+                <div class="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg">
+                  <div>
+                    <p class="text-white text-sm font-medium">
+                      ${guess.guess} • {guess.accuracy}% accuracy
+                    </p>
+                    <p class="text-muted text-xs">{guess.itemTitle}</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-white text-sm">{guess.submittedAt}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        }
+      </div>
+    </main>
+  </div>
+</Layout>

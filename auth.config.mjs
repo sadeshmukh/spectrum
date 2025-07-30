@@ -28,6 +28,7 @@ export default defineConfig({
             name: user.name,
             image: user.image,
             isAdmin: import.meta.env.ADMIN_EMAIL === user.email,
+            isPublic: false,
           })
           .returning()
           .get();
@@ -50,12 +51,21 @@ export default defineConfig({
     },
     async session({ session, token }) {
       if (token) {
+        // get user data from database to include public stats fields
+        const dbUser = await db
+          .select()
+          .from(Users)
+          .where(eq(Users.email, token.email))
+          .get();
+
         session.user = {
           id: token.id,
           email: token.email,
           name: token.name,
           image: token.picture,
           isAdmin: import.meta.env.ADMIN_EMAIL === token.email,
+          isPublic: dbUser?.isPublic || false,
+          publicUsername: dbUser?.publicUsername,
         };
       }
       return session;

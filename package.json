@@ -11,6 +11,7 @@
     "astro": "astro",
     "db:push:schema": "astro db push --remote",
     "db:seed": "astro db execute db/seed.ts --remote",
+    "db:migrate-public-stats": "astro db execute db/migrate-public-stats.ts --remote",
     "populate:amazon": "tsx scripts/amazon-populate.ts",
     "populate:fakestore": "tsx scripts/fakestore-populate.ts",
     "populate:dummyjson": "tsx scripts/dummyjson-populate.ts",

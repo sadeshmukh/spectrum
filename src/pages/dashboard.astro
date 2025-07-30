@@ -47,6 +47,8 @@ const userStats = {
   totalGuesses: userGuesses[0]?.count || 0,
   bestAccuracy: bestAccuracy[0]?.max || 0,
   averageAccuracy: averageAccuracy[0]?.avg || 0,
+  isPublic: user.isPublic || false,
+  publicUsername: user.publicUsername,
 };
 ---
 
@@ -119,9 +121,38 @@ const userStats = {
                 </a>
               )
             }
-            <SignOut class="text-muted hover:text-white text-sm">
-              Sign out
-            </SignOut>
+            <div class="flex items-center gap-4">
+              <div class="flex items-center gap-2">
+                <label class="text-muted text-sm">Public Profile</label>
+                <button
+                  id="toggle-public"
+                  class={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    userStats.isPublic ? "bg-accent" : "bg-gray-600"
+                  }`}
+                  data-public={userStats.isPublic}
+                >
+                  <span
+                    class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      userStats.isPublic ? "translate-x-6" : "translate-x-1"
+                    }`}></span>
+                </button>
+              </div>
+              {
+                userStats.isPublic && userStats.publicUsername ? (
+                  <a
+                    href={`/user/${userStats.publicUsername}`}
+                    class="text-accent hover:text-accent/80 text-sm transition-colors"
+                    target="_blank"
+                  >
+                    View Profile
+                  </a>
+                ) : null
+              }
+
+              <SignOut class="text-muted hover:text-white text-sm">
+                Sign out
+              </SignOut>
+            </div>
           </div>
         </div>
       </div>
@@ -367,7 +398,296 @@ const userStats = {
       </div>
     </main>
   </div>
+
+  <!-- Username Setup Modal -->
+  <div
+    id="username-modal"
+    class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center"
+    style="display: none;"
+  >
+    <div
+      class="bg-card rounded-xl p-8 max-w-md w-full mx-4 border border-accent/20"
+    >
+      <div class="text-center mb-6">
+        <h3 class="text-2xl font-bold text-white mb-2">Choose Your Username</h3>
+        <p class="text-muted">This will be your public profile URL</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label
+            for="username-input"
+            class="block text-white text-sm font-medium mb-2"
+          >
+            Username
+          </label>
+          <input
+            type="text"
+            id="username-input"
+            placeholder="Enter username or leave empty for random"
+            class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-accent focus:outline-none"
+            maxlength="20"
+          />
+          <p class="text-muted text-xs mt-1">
+            Use only lowercase letters, numbers, and hyphens
+          </p>
+        </div>
+
+        <div class="flex gap-3">
+          <button
+            id="generate-username"
+            class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg transition-colors"
+          >
+            Generate Random
+          </button>
+          <button
+            id="confirm-username"
+            class="flex-1 bg-accent hover:bg-accent/90 text-black px-4 py-3 rounded-lg font-medium transition-colors"
+          >
+            Confirm
+          </button>
+        </div>
+
+        <button
+          id="cancel-username"
+          class="w-full text-muted hover:text-white text-sm transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
 </Layout>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const toggleButton = document.getElementById(
+      "toggle-public"
+    ) as HTMLButtonElement;
+
+    toggleButton?.addEventListener("click", async function () {
+      try {
+        const currentPublic =
+          toggleButton.getAttribute("data-public") === "true";
+        const newPublic = !currentPublic;
+
+        toggleButton.disabled = true;
+
+        // Remove fetch when enabling public profile, only use modal confirm
+        if (newPublic) {
+          toggleButton.setAttribute("data-public", newPublic.toString());
+          toggleButton.classList.toggle("bg-accent", true);
+          toggleButton.classList.toggle("bg-gray-600", false);
+          const span = toggleButton.querySelector("span");
+          if (span) {
+            span.classList.replace("translate-x-1", "translate-x-6");
+          }
+
+          // Show username modal
+          const usernameModal = document.getElementById("username-modal");
+          if (usernameModal) {
+            usernameModal.style.display = "flex";
+            const usernameInput = document.getElementById(
+              "username-input"
+            ) as HTMLInputElement;
+            usernameInput?.focus();
+          }
+        } else {
+          // Disable public profile via API
+          const response = await fetch("/api/user/public-stats", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isPublic: false }),
+          });
+          const result = await response.json();
+          if (!result.success) {
+            alert(result.error || "Failed to update public profile setting");
+            return;
+          }
+          // Remove view profile link if exists
+          const viewProfileLink = document.querySelector('a[href^="/user/"]');
+          viewProfileLink?.remove();
+        }
+      } catch (error) {
+        console.error("Error updating public profile:", error);
+        alert("Error updating public profile setting");
+      } finally {
+        toggleButton.disabled = false;
+      }
+    });
+
+    // Handle username setup functionality
+    const generateUsernameBtn = document.getElementById(
+      "generate-username"
+    ) as HTMLButtonElement;
+    const confirmUsernameBtn = document.getElementById(
+      "confirm-username"
+    ) as HTMLButtonElement;
+    const usernameInput = document.getElementById(
+      "username-input"
+    ) as HTMLInputElement;
+
+    generateUsernameBtn?.addEventListener("click", async function () {
+      try {
+        generateUsernameBtn.disabled = true;
+        generateUsernameBtn.textContent = "Generating...";
+
+        const response = await fetch("/api/user/generate-username", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          usernameInput.value = result.data.username;
+        } else {
+          alert("Failed to generate username");
+        }
+      } catch (error) {
+        console.error("Error generating username:", error);
+        alert("Error generating username");
+      } finally {
+        generateUsernameBtn.disabled = false;
+        generateUsernameBtn.textContent = "Generate Random";
+      }
+    });
+
+    confirmUsernameBtn?.addEventListener("click", async function () {
+      try {
+        confirmUsernameBtn.disabled = true;
+        confirmUsernameBtn.textContent = "Confirming...";
+
+        const username = usernameInput.value.trim();
+        const response = await fetch("/api/user/public-stats", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            isPublic: true,
+            username: username || null,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Hide modal
+          const usernameModal = document.getElementById("username-modal");
+          if (usernameModal) {
+            usernameModal.style.display = "none";
+          }
+
+          // Create and show the "View Profile" link
+          const viewProfileLink = document.createElement("a");
+          viewProfileLink.href = `/user/${result.data.publicUsername}`;
+          viewProfileLink.className =
+            "text-accent hover:text-accent/80 text-sm transition-colors";
+          viewProfileLink.target = "_blank";
+          viewProfileLink.textContent = "View Profile";
+
+          // Insert the link after the toggle button
+          const toggleContainer = document.querySelector(
+            ".flex.items-center.gap-4"
+          );
+          if (toggleContainer) {
+            toggleContainer.insertBefore(
+              viewProfileLink,
+              toggleContainer.lastElementChild
+            );
+          }
+        } else {
+          alert(result.error || "Failed to set username");
+        }
+      } catch (error) {
+        console.error("Error confirming username:", error);
+        alert("Error confirming username");
+      } finally {
+        confirmUsernameBtn.disabled = false;
+        confirmUsernameBtn.textContent = "Confirm";
+      }
+    });
+
+    // Allow Enter key to confirm username
+    usernameInput?.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        confirmUsernameBtn?.click();
+      }
+    });
+
+    // Handle modal close functionality
+    const cancelUsernameBtn = document.getElementById(
+      "cancel-username"
+    ) as HTMLButtonElement;
+    const usernameModal = document.getElementById("username-modal");
+
+    // Close modal on cancel
+    cancelUsernameBtn?.addEventListener("click", function () {
+      if (usernameModal) {
+        usernameModal.style.display = "none";
+      }
+      // Reset toggle button to off since user cancelled
+      const toggleButton = document.getElementById(
+        "toggle-public"
+      ) as HTMLButtonElement;
+      if (toggleButton) {
+        toggleButton.setAttribute("data-public", "false");
+        toggleButton.classList.remove("bg-accent");
+        toggleButton.classList.add("bg-gray-600");
+        const span = toggleButton.querySelector("span");
+        if (span) {
+          span.classList.remove("translate-x-6");
+          span.classList.add("translate-x-1");
+        }
+      }
+    });
+
+    // Close modal when clicking outside
+    usernameModal?.addEventListener("click", function (e) {
+      if (e.target === usernameModal) {
+        usernameModal.style.display = "none";
+        // Reset toggle button to off since user cancelled
+        const toggleButton = document.getElementById(
+          "toggle-public"
+        ) as HTMLButtonElement;
+        if (toggleButton) {
+          toggleButton.setAttribute("data-public", "false");
+          toggleButton.classList.remove("bg-accent");
+          toggleButton.classList.add("bg-gray-600");
+          const span = toggleButton.querySelector("span");
+          if (span) {
+            span.classList.remove("translate-x-6");
+            span.classList.add("translate-x-1");
+          }
+        }
+      }
+    });
+
+    // Close modal on escape key
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && usernameModal?.style.display === "flex") {
+        usernameModal.style.display = "none";
+        // Reset toggle button to off since user cancelled
+        const toggleButton = document.getElementById(
+          "toggle-public"
+        ) as HTMLButtonElement;
+        if (toggleButton) {
+          toggleButton.setAttribute("data-public", "false");
+          toggleButton.classList.remove("bg-accent");
+          toggleButton.classList.add("bg-gray-600");
+          const span = toggleButton.querySelector("span");
+          if (span) {
+            span.classList.remove("translate-x-6");
+            span.classList.add("translate-x-1");
+          }
+        }
+      }
+    });
+  });
+</script>
 
 <script>
   // Handle user dropdown functionality

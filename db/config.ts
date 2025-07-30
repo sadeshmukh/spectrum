@@ -6,6 +6,8 @@ const Users = defineTable({
     name: column.text(),
     image: column.text({ optional: true }),
     isAdmin: column.boolean({ default: false }),
+    isPublic: column.boolean({ default: false }),
+    publicUsername: column.text({ optional: true }),
     createdAt: column.date({ default: NOW }),
     updatedAt: column.date({ default: NOW }),
   },
