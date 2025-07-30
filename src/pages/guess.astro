@@ -49,22 +49,53 @@ try {
 ---
 
 <Layout title="Guess - Spectrum">
-  <div class="min-h-screen bg-black text-white font-mono">
+  <div class="min-h-screen bg-black text-white">
     <!-- Toast notification container -->
     <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Minimal Header -->
+    <header class="border-b border-gray-800 bg-card/50 backdrop-blur-sm">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="flex justify-between items-center h-16">
+          <a
+            href="/dashboard"
+            class="text-xl font-bold text-white hover:text-accent transition-colors"
+          >
+            SPECTRUM
+          </a>
+          <a
+            href="/dashboard"
+            class="inline-flex items-center gap-2 bg-card hover:bg-card-hover text-white font-medium py-2 px-4 rounded-lg transition-colors border border-gray-700 hover:border-accent/30"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Back to Dashboard
+          </a>
+        </div>
+      </div>
+    </header>
 
     <div class="container mx-auto px-6 py-12">
       <div class="max-w-4xl mx-auto">
         <div class="text-center mb-16">
           <h1 class="text-6xl font-bold mb-6 text-white tracking-tight">
-            GUESS THE PRICE
+            SPECTRUM
           </h1>
-          <p class="text-xl text-gray-400 font-light">
-            Test your Amazon pricing intuition
-          </p>
+          <!-- <p class="text-muted text-xl mb-8">Test your price intuition</p> -->
+
           {
             errorMessage && (
-              <div class="mt-8 bg-red-900/20 border border-red-500/30 rounded-2xl p-6">
+              <div class="mt-8 bg-card border border-red-500/30 rounded-xl p-6">
                 <div class="flex items-center justify-center gap-3 mb-4">
                   <svg
                     class="w-8 h-8 text-red-400"
@@ -83,10 +114,10 @@ try {
                     No Items Available
                   </h3>
                 </div>
-                <p class="text-red-300 text-lg mb-4">{errorMessage}</p>
+                <p class="text-muted text-lg mb-4">{errorMessage}</p>
                 <a
                   href="/dashboard"
-                  class="inline-block bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-2xl transition-colors"
+                  class="inline-block bg-accent text-black font-bold py-3 px-6 rounded-lg transition-colors hover:bg-accent/90"
                 >
                   Return to Dashboard
                 </a>
@@ -97,24 +128,24 @@ try {
 
         {
           !errorMessage && item?.id && (
-            <div class="bg-gray-900 rounded-3xl p-10 mb-10 border border-gray-800 shadow-2xl">
+            <div class="bg-card rounded-xl p-10 mb-10 border border-gray-700 shadow-xl">
               <div class="grid lg:grid-cols-2 gap-12 items-center">
                 <div class="space-y-6">
                   <div class="relative group">
-                    <div class="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl blur opacity-20 group-hover:opacity-30 transition-opacity" />
-                    <div class="relative bg-gray-800 rounded-2xl p-2 border border-gray-700">
+                    <div class="absolute inset-0 bg-gradient-to-r from-accent to-accent/60 rounded-xl blur opacity-20 group-hover:opacity-30 transition-opacity" />
+                    <div class="relative bg-gray-800 rounded-xl p-2 border border-gray-700">
                       <img
                         src={
                           item.photoUrl ||
-                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239CA3AF' font-family='monospace' font-size='16'%3EProduct Image%3C/text%3E%3C/svg%3E"
+                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239CA3AF' font-family='Inter' font-size='16'%3EProduct Image%3C/text%3E%3C/svg%3E"
                         }
                         alt={item.title}
-                        class="w-full max-h-96 object-contain rounded-xl"
+                        class="w-full max-h-96 object-contain rounded-lg"
                       />
                     </div>
                   </div>
                   <div class="text-center space-y-4">
-                    <h2 class="text-2xl font-semibold text-gray-100 leading-tight">
+                    <h2 class="text-2xl font-semibold text-white leading-tight">
                       {item.title}
                     </h2>
                     <a
@@ -122,7 +153,7 @@ try {
                       target="_blank"
                       rel="noopener noreferrer"
                       id="amazon-link"
-                      class="inline-flex items-center text-orange-400 hover:text-orange-300 transition-colors font-medium text-lg"
+                      class="inline-flex items-center text-accent hover:text-accent/80 transition-colors font-medium text-lg"
                       style="display: none;"
                     >
                       <svg
@@ -145,12 +176,12 @@ try {
                   <div class="space-y-6">
                     <label
                       for="price-guess"
-                      class="block text-2xl font-bold text-gray-200"
+                      class="block text-2xl font-bold text-white"
                     >
                       Your Price Guess
                     </label>
                     <div class="relative">
-                      <span class="absolute left-6 top-1/2 transform -translate-y-1/2 text-gray-400 text-2xl font-bold">
+                      <span class="absolute left-6 top-1/2 transform -translate-y-1/2 text-muted text-2xl font-bold">
                         $
                       </span>
                       <input
@@ -161,16 +192,14 @@ try {
                         min="0"
                         max={item.maxPrice}
                         placeholder="0.00"
-                        class="w-full pl-14 pr-6 py-6 bg-gray-800 border-2 border-gray-700 rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-2xl font-bold transition-colors"
+                        class="w-full pl-14 pr-6 py-6 bg-gray-800 border-2 border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-accent text-2xl font-bold transition-colors"
                       />
                     </div>
 
                     <div class="space-y-4">
                       <div class="flex justify-between items-center">
-                        <span class="text-gray-400 font-medium">
-                          Quick Select
-                        </span>
-                        <span class="text-gray-400 font-medium">
+                        <span class="text-muted font-medium">Quick Select</span>
+                        <span class="text-muted font-medium">
                           Max: ${item.maxPrice}
                         </span>
                       </div>
@@ -184,7 +213,7 @@ try {
                           value="0"
                           class="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
                         />
-                        <div class="flex justify-between text-sm text-gray-500 mt-3 font-medium">
+                        <div class="flex justify-between text-sm text-muted mt-3 font-medium">
                           <span>$0</span>
                           <span>${Math.round(item.maxPrice / 2)}</span>
                           <span>${item.maxPrice}</span>
@@ -196,7 +225,7 @@ try {
                   <button
                     type="button"
                     id="submit-guess"
-                    class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-5 px-8 rounded-2xl transition-all duration-200 transform hover:scale-105 text-xl border-2 border-green-600 hover:border-green-500 shadow-lg hover:shadow-green-500/25"
+                    class="w-full bg-accent hover:bg-accent/90 text-black font-bold py-5 px-8 rounded-xl transition-all duration-200 transform hover:scale-105 text-xl border-2 border-accent hover:border-accent/90 shadow-lg hover:shadow-accent/25"
                   >
                     SUBMIT GUESS
                   </button>
@@ -209,49 +238,47 @@ try {
         <!-- Results section (hidden by default) -->
         <div
           id="results"
-          class="bg-gray-900 rounded-3xl p-10 hidden border border-gray-800 shadow-2xl"
+          class="bg-card rounded-xl p-10 hidden border border-gray-700 shadow-xl"
         >
           <h3 class="text-4xl font-bold text-center mb-12 text-white">
             RESULTS
           </h3>
           <div class="grid md:grid-cols-3 gap-8">
             <div
-              class="bg-gray-800 rounded-2xl p-8 text-center border border-gray-700"
+              class="bg-gray-800 rounded-xl p-8 text-center border border-gray-700"
             >
-              <div class="text-gray-400 mb-4 text-lg font-medium">
-                YOUR GUESS
-              </div>
+              <div class="text-muted mb-4 text-lg font-medium">YOUR GUESS</div>
               <div id="user-guess" class="text-4xl font-bold text-white">
                 $0.00
               </div>
             </div>
             <div
-              class="bg-gray-800 rounded-2xl p-8 text-center border border-gray-700"
+              class="bg-gray-800 rounded-xl p-8 text-center border border-gray-700"
             >
-              <div class="text-gray-400 mb-4 text-lg font-medium">
+              <div class="text-muted mb-4 text-lg font-medium">
                 ACTUAL PRICE
               </div>
-              <div id="actual-price" class="text-4xl font-bold text-green-400">
+              <div id="actual-price" class="text-4xl font-bold text-accent">
                 $0.00
               </div>
             </div>
             <div
-              class="bg-gray-800 rounded-2xl p-8 text-center border border-gray-700"
+              class="bg-gray-800 rounded-xl p-8 text-center border border-gray-700"
             >
-              <div class="text-gray-400 mb-4 text-lg font-medium">ACCURACY</div>
+              <div class="text-muted mb-4 text-lg font-medium">ACCURACY</div>
               <div id="accuracy" class="text-4xl font-bold text-orange-400">
                 0%
               </div>
             </div>
           </div>
           <div class="mt-12 text-center space-y-4">
-            <div class="text-gray-400 mb-4">
+            <div class="text-muted mb-4">
               <span id="countdown">10</span> seconds until next item...
             </div>
             <button
               type="button"
               id="next-item"
-              class="bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-10 rounded-2xl transition-all duration-200 text-lg border-2 border-green-600 hover:border-green-500"
+              class="bg-accent hover:bg-accent/90 text-black font-bold py-4 px-10 rounded-xl transition-all duration-200 text-lg border-2 border-accent hover:border-accent/90"
             >
               NEXT ITEM NOW →
             </button>
@@ -260,7 +287,7 @@ try {
                 <div class="pt-4">
                   <a
                     href={`/item-stats/${item.id}`}
-                    class="inline-flex items-center text-blue-400 hover:text-blue-300 transition-colors font-medium"
+                    class="inline-flex items-center text-accent hover:text-accent/80 transition-colors font-medium"
                   >
                     <svg
                       class="w-5 h-5 mr-2"
@@ -309,30 +336,30 @@ try {
       width: 24px;
       height: 24px;
       border-radius: 50%;
-      background: #10b981;
+      background: #00ff88;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-      border: 2px solid #059669;
+      box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4);
+      border: 2px solid #00cc6a;
     }
 
     .slider::-moz-range-thumb {
       width: 24px;
       height: 24px;
       border-radius: 50%;
-      background: #10b981;
+      background: #00ff88;
       cursor: pointer;
-      border: 2px solid #059669;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+      border: 2px solid #00cc6a;
+      box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4);
     }
 
     .slider::-webkit-slider-track {
-      background: linear-gradient(to right, #374151, #10b981);
+      background: linear-gradient(to right, #374151, #00ff88);
       height: 12px;
       border-radius: 6px;
     }
 
     .slider::-moz-range-track {
-      background: linear-gradient(to right, #374151, #10b981);
+      background: linear-gradient(to right, #374151, #00ff88);
       height: 12px;
       border-radius: 6px;
       border: none;

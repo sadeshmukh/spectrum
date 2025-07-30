@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { getSession } from "auth-astro/server";
-import { assignRandomItemToUser } from "../../../lib/items";
+import { getCurrentUserItem, assignRandomItemToUser } from "../../../lib/items";
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -13,9 +13,14 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const item = await assignRandomItemToUser(session.user.email);
+    let item = await getCurrentUserItem(session.user.email);
 
     if (!item) {
+      item = await assignRandomItemToUser(session.user.email);
+    }
+
+    if (!item) {
+      // assign random to user fails silently in this case with no items available
       return new Response(
         JSON.stringify({ success: false, error: "No items available" }),
         { status: 404, headers: { "Content-Type": "application/json" } }

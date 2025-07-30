@@ -1,0 +1,30 @@
+---
+const {
+  logoHref = "/",
+  logoSize = "sm",
+  navClass = "border-b border-gray-800 bg-card",
+  containerClass = "max-w-7xl mx-auto px-6",
+  heightClass = "h-16",
+  logoClass = "",
+} = Astro.props;
+
+const textSize = logoSize === "lg" ? "text-4xl" : "text-xl";
+---
+
+<nav class={navClass}>
+  <div class={containerClass}>
+    <div class={`flex justify-between items-center ${heightClass}`}>
+      <div class="flex items-center gap-4">
+        <a
+          href={logoHref}
+          class={`font-bold text-white hover:text-accent transition-colors ${textSize} ${logoClass}`}
+          >SPECTRUM</a
+        >
+        <slot name="left" />
+      </div>
+      <div class="flex items-center gap-4">
+        <slot />
+      </div>
+    </div>
+  </div>
+</nav>
