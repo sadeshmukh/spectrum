@@ -6,6 +6,10 @@ import {
   isUsernameAvailable,
   validateUsername,
 } from "../../../lib/username.js";
+import {
+  isValidEmail,
+  sanitizeUsername,
+} from "../../../lib/input-sanitization.js";
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -18,7 +22,27 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const { isPublic, username } = await request.json();
+    if (!isValidEmail(session.user.email)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid email format" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    let requestBody;
+    try {
+      requestBody = await request.json();
+    } catch (error) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid JSON in request body",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const { isPublic, username } = requestBody;
 
     if (typeof isPublic !== "boolean") {
       return new Response(
@@ -27,7 +51,15 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // get current user data
+    if (username !== undefined && typeof username !== "string") {
+      return new Response(
+        JSON.stringify({ success: false, error: "Username must be a string" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const sanitizedUsername = username ? sanitizeUsername(username) : null;
+
     const currentUser = await db
       .select()
       .from(Users)
@@ -43,10 +75,9 @@ export const POST: APIRoute = async ({ request }) => {
 
     let publicUsername = currentUser.publicUsername;
 
-    // handle username generation/validation when enabling public profile
     if (isPublic && !publicUsername) {
-      if (username) {
-        const validation = validateUsername(username);
+      if (sanitizedUsername) {
+        const validation = validateUsername(sanitizedUsername);
         if (!validation.valid) {
           return new Response(
             JSON.stringify({ success: false, error: validation.error }),
@@ -54,8 +85,7 @@ export const POST: APIRoute = async ({ request }) => {
           );
         }
 
-        // check available
-        const available = await isUsernameAvailable(username);
+        const available = await isUsernameAvailable(sanitizedUsername);
         if (!available) {
           return new Response(
             JSON.stringify({
@@ -66,18 +96,28 @@ export const POST: APIRoute = async ({ request }) => {
           );
         }
 
-        publicUsername = username;
+        publicUsername = sanitizedUsername;
       } else {
         publicUsername = await generateRandomUsername();
 
-        // ensure uniqueness
-        while (!(await isUsernameAvailable(publicUsername))) {
+        let attempts = 0;
+        while (!(await isUsernameAvailable(publicUsername)) && attempts < 10) {
           publicUsername = await generateRandomUsername();
+          attempts++;
+        }
+
+        if (attempts >= 10) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "Unable to generate unique username",
+            }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
+          );
         }
       }
     }
 
-    // update user's public stats setting
     await db.run(sql`
       UPDATE users 
       SET isPublic = ${isPublic}, 

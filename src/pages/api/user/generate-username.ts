@@ -4,6 +4,7 @@ import {
   generateRandomUsername,
   isUsernameAvailable,
 } from "../../../lib/username.js";
+import { isValidEmail } from "../../../lib/input-sanitization.js";
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -16,10 +17,15 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // random username
+    if (!isValidEmail(session.user.email)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid email format" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     let username = await generateRandomUsername();
 
-    // ensure uniqueness
     let attempts = 0;
     while (!(await isUsernameAvailable(username)) && attempts < 10) {
       username = await generateRandomUsername();

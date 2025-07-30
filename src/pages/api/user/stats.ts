@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { getSession } from "auth-astro/server";
 import { db, UserGuesses, Items, count, desc, eq, sql } from "astro:db";
+import { isValidEmail } from "../../../lib/input-sanitization.js";
 
 export const GET: APIRoute = async ({ request }) => {
   try {
@@ -10,6 +11,13 @@ export const GET: APIRoute = async ({ request }) => {
       return new Response(
         JSON.stringify({ success: false, error: "Unauthorized" }),
         { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!isValidEmail(session.user.email)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid email format" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
