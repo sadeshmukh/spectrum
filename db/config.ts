@@ -20,6 +20,8 @@ const Items = defineTable({
     photoUrl: column.text({ optional: true }),
     title: column.text({ optional: true }),
     actualPrice: column.number({ optional: true }),
+    // averageAccuracyCache: column.number({ optional: true }),
+    // calculate on the fly? ^^ from userguesses sql query
     createdAt: column.date({ default: NOW }),
     updatedAt: column.date({ default: NOW }),
   },

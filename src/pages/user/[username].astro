@@ -73,13 +73,13 @@ const userStats = {
               class="text-xl font-bold text-white hover:text-accent transition-colors"
               >SPECTRUM</a
             >
-            <div class="flex items-center gap-2">
+            <!-- <div class="flex items-center gap-2">
               <div class="w-2 h-2 bg-gray-500 rounded-full"></div>
 
               <span class="text-gray-400 text-sm font-medium"
                 >PUBLIC PROFILE</span
               >
-            </div>
+            </div> -->
           </div>
           <div class="flex items-center gap-4">
             <a
@@ -99,7 +99,7 @@ const userStats = {
           {
             user.image && (
               <img
-                src={user.image}
+                src={user.image || "/default-avatar.png"}
                 alt={user.publicUsername}
                 class="w-16 h-16 rounded-full ring-2 ring-accent/30"
               />

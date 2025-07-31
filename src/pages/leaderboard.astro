@@ -1,0 +1,205 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { getSession } from "auth-astro/server";
+import Header from "../components/Header.astro";
+
+if (import.meta.env.PROD) {
+  return Astro.redirect("/");
+}
+
+const session = await getSession(Astro.request);
+
+const user = session?.user;
+
+// timeframe can later be dynamic - for now default to "today"
+const timeframe = "today";
+
+let userScore: number | null = null;
+let userStats: {
+  totalGuesses: number;
+  bestAccuracy: number;
+  averageAccuracy: number;
+} | null = null;
+
+if (user) {
+  const scoreRes = await fetch(
+    `${Astro.url.origin}/api/leaderboard/user?timeframe=${timeframe}`,
+    {
+      headers: { Cookie: Astro.request.headers.get("cookie") || "" },
+    }
+  );
+
+  if (scoreRes.ok) {
+    const scoreJson = await scoreRes.json();
+    if (scoreJson.success) {
+      userScore = scoreJson.data.userScore ?? null;
+    }
+  }
+
+  const statsRes = await fetch(`${Astro.url.origin}/api/user/stats`, {
+    headers: { Cookie: Astro.request.headers.get("cookie") || "" },
+  });
+
+  if (statsRes.ok) {
+    const statsJson = await statsRes.json();
+    if (statsJson.success) {
+      userStats = {
+        totalGuesses: statsJson.data.totalGuesses,
+        bestAccuracy: statsJson.data.bestAccuracy,
+        averageAccuracy: statsJson.data.averageAccuracy,
+      };
+    }
+  }
+}
+
+type LeaderboardEntry = {
+  username: string;
+  avatar: string;
+  totalGuesses: number;
+  bestAccuracy: number;
+  averageAccuracy: number;
+  score: number;
+};
+
+const leaderboard: LeaderboardEntry[] = [
+  {
+    username: "Alice",
+    avatar: "https://via.placeholder.com/32",
+    totalGuesses: 42,
+    bestAccuracy: 97,
+    averageAccuracy: 80,
+    score: 1890,
+  },
+  {
+    username: "Bob",
+    avatar: "https://via.placeholder.com/32",
+    totalGuesses: 30,
+    bestAccuracy: 92,
+    averageAccuracy: 70,
+    score: 1500,
+  },
+];
+
+// const response = await fetch(`${Astro.url.origin}/api/leaderboard?date=today`);
+// const leaderboard: LeaderboardEntry[] = await response.json();
+
+leaderboard.sort((a, b) => b.score - a.score);
+
+const userRank = user
+  ? leaderboard.findIndex((entry) => entry.username === user.publicUsername) + 1
+  : null;
+---
+
+<Layout title="Leaderboard - Spectrum">
+  <div class="min-h-screen bg-black">
+    <Header />
+
+    <main class="max-w-7xl mx-auto px-6 py-10 mt-4">
+      <h1 class="text-3xl font-bold text-white mb-6">Leaderboard</h1>
+
+      <div class="overflow-x-auto">
+        <table
+          class="min-w-full bg-card border border-gray-700 rounded-lg overflow-hidden"
+        >
+          <thead>
+            <tr class="border-b border-gray-700">
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                >Rank</th
+              >
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                >Score</th
+              >
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                >User</th
+              >
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                >Total Guesses</th
+              >
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                >Best Accuracy</th
+              >
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                >Average Accuracy</th
+              >
+            </tr>
+          </thead>
+          <tbody>
+            {
+              leaderboard.map((entry, idx) => (
+                <tr class={idx !== 0 ? "border-t border-gray-700" : ""}>
+                  <td class="px-6 py-4 text-white">#{idx + 1}</td>
+                  <td class="px-6 py-4 text-white text-center">
+                    {entry.score}
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                      <img
+                        class="w-8 h-8 rounded-full"
+                        src={entry.avatar}
+                        alt={entry.username}
+                      />
+                      <span class="text-white">{entry.username}</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 text-white text-center">
+                    {entry.totalGuesses}
+                  </td>
+                  <td class="px-6 py-4 text-white text-center">
+                    {entry.bestAccuracy}%
+                  </td>
+                  <td class="px-6 py-4 text-white text-center">
+                    {entry.averageAccuracy}%
+                  </td>
+                </tr>
+              ))
+            }
+
+            {
+              user &&
+                userScore !== null &&
+                userStats !== null &&
+                ((userRank ?? 0) === 0 ||
+                  (userRank ?? 0) > leaderboard.length) && (
+                  <tr class="border-t border-gray-700 bg-gray-800/20">
+                    <td class="px-6 py-4 text-white">
+                      {userRank && userRank > 0 ? `#${userRank}` : "--"}
+                    </td>
+                    <td class="px-6 py-4 text-white text-center">
+                      {Math.round(userScore)}
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="flex items-center gap-3">
+                        <img
+                          class="w-8 h-8 rounded-full"
+                          src={user.image}
+                          alt={user.publicUsername}
+                        />
+                        <span class="text-white">
+                          {user.publicUsername} (You)
+                        </span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 text-white text-center">
+                      {userStats.totalGuesses}
+                    </td>
+                    <td class="px-6 py-4 text-white text-center">
+                      {Math.round(userStats.bestAccuracy)}%
+                    </td>
+                    <td class="px-6 py-4 text-white text-center">
+                      {Math.round(userStats.averageAccuracy)}%
+                    </td>
+                  </tr>
+                )
+            }
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</Layout>

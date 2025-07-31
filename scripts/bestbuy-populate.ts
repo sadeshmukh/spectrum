@@ -203,7 +203,7 @@ async function main() {
 
         for (const url of productUrls) {
           try {
-            await delay(1000, 2000);
+            await delay(500, 1000);
             const result = await scrapeBestBuyPrice(url);
 
             if (result.success && result.data) {
@@ -246,7 +246,7 @@ async function main() {
         stats.failure += results.length - successfulItems.length;
 
         searchProgress.tick();
-        await delay(5000, 10000);
+        await delay(1000, 2000);
       } catch (searchError) {
         console.error(`\nError processing search ${searchUrl}:`, searchError);
         stats.failure++;

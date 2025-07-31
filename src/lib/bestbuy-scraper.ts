@@ -133,8 +133,26 @@ async function parseBestBuyHTML(html: string): Promise<BestBuyProduct> {
     /class="[^"]*amount[^"]*"[^>]*>[\s]*\$?([\d,]+\.?\d*)/i,
     /data-price="([\d,]+\.?\d*)"/i,
     /price[^>]*>[\s]*\$?([\d,]+\.?\d*)/i,
+    /aria-label="[^"]*price[^"]*"[^>]*>[\s]*\$?([\d,]+\.?\d*)/i,
+    /data-testid="[^"]*price[^"]*"[^>]*>[\s]*\$?([\d,]+\.?\d*)/i,
+    /<span[^>]*class="[^"]*price[^"]*"[^>]*>[\s]*\$?([\d,]+\.?\d*)/i,
+    /<div[^>]*class="[^"]*price[^"]*"[^>]*>[\s]*\$?([\d,]+\.?\d*)/i,
+    /data-price-value="([\d,]+\.?\d*)"/i,
+    /data-current-price="([\d,]+\.?\d*)"/i,
+    /data-sale-price="([\d,]+\.?\d*)"/i,
+    /data-regular-price="([\d,]+\.?\d*)"/i,
+    /"price":\s*"([\d,]+\.?\d*)"/i,
+    /"currentPrice":\s*"([\d,]+\.?\d*)"/i,
+    /"salePrice":\s*"([\d,]+\.?\d*)"/i,
+    /"regularPrice":\s*"([\d,]+\.?\d*)"/i,
+    /"customerPrice":\s*([\d,]+\.?\d*)/i,
+    /"price":\s*([\d,]+\.?\d*)/i,
+    /"currentPrice":\s*([\d,]+\.?\d*)/i,
+    /"salePrice":\s*([\d,]+\.?\d*)/i,
+    /"regularPrice":\s*([\d,]+\.?\d*)/i,
   ];
 
+  let priceFound = false;
   for (const pattern of pricePatterns) {
     const match = html.match(pattern);
     if (match) {
@@ -143,6 +161,7 @@ async function parseBestBuyHTML(html: string): Promise<BestBuyProduct> {
       if (price) {
         product.price = price.amount;
         product.currency = price.currency;
+        priceFound = true;
         break;
       }
     }

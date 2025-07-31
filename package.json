@@ -16,7 +16,8 @@
     "populate:fakestore": "tsx scripts/fakestore-populate.ts",
     "populate:dummyjson": "tsx scripts/dummyjson-populate.ts",
     "populate:mock": "tsx scripts/mock-populate.ts",
-    "populate:bestbuy": "tsx scripts/bestbuy-populate.ts"
+    "populate:bestbuy": "tsx scripts/bestbuy-populate.ts",
+    "test:r2": "node test-r2-connection.js"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.0.0",
