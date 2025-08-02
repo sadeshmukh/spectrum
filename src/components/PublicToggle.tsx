@@ -200,7 +200,7 @@ const PublicToggle: React.FC<PublicToggleProps> = ({
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="w-full text-muted hover:text-white text-sm transition-colors"
+                className="w-full text-muted hover:text-white text-sm transition-colors hover:cursor-pointer"
               >
                 Cancel
               </button>
