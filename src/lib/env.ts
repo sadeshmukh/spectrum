@@ -18,4 +18,5 @@ export const env = {
   AWS_REGION: process.env.AWS_REGION!,
   ASTRO_DB_REMOTE_URL: process.env.ASTRO_DB_REMOTE_URL,
   ASTRO_DB_APP_TOKEN: process.env.ASTRO_DB_APP_TOKEN,
+  PUBLIC_AI_API_KEY: process.env.PUBLIC_AI_API_KEY,
 } as const;
