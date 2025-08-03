@@ -28,3 +28,4 @@ db/scraped-items.ts
 
 backup
 
+.env.prod

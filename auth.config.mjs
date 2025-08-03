@@ -3,6 +3,9 @@ import GitHub from "@auth/core/providers/github";
 import { db, Users, eq } from "astro:db";
 
 export default defineConfig({
+  trustHost: true,
+  basePath: "/api/auth", 
+  baseUrl: import.meta.env.AUTH_URL || (import.meta.env.DEV ? undefined : "https://spectrum.sahil.ink"),
   providers: [
     GitHub({
       clientId: import.meta.env.GITHUB_CLIENT_ID,
