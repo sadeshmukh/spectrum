@@ -3,6 +3,9 @@
 ![made with ❤️ by sadeshmukh](https://img.shields.io/badge/made%20with%20%E2%9D%A4%EF%B8%8F%20by-sadeshmukh-blue)
 
 A guessing game built with Astro, Turso, and Cloudflare R2.
+Given real world items from places such as Best Buy and Amazon, can you guess the price?
+
+Includes: public profiles, stats tracking, individual item stats, admin dashboard, public viewable challenge links, and more!
 
 ## Setup
 
