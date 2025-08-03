@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "populate": "tsx populate-items.ts",
-    "mock": "tsx generate-mock-products.ts"
+    "mock": "tsx generate-mock-products.ts",
+    "aggregate": "tsx aggregate-populate.ts",
+    "aggregate:test": "tsx test-aggregate.js"
   },
   "dependencies": {
     "@astrojs/db": "^0.15.0",
