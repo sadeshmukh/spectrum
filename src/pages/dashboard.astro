@@ -57,15 +57,53 @@ const userStats = {
 <Layout title="Dashboard - Spectrum">
   <div class="min-h-screen bg-black">
     <!-- Nav -->
-    <nav class="border-b border-gray-800 bg-card">
+    <nav class="bg-card border-b border-gray-700/50">
       <div class="max-w-7xl mx-auto px-6">
         <div class="flex justify-between items-center h-16">
+          <!-- Logo -->
           <a
             href="/dashboard"
             class="text-xl font-bold text-white hover:text-accent transition-colors"
-            >SPECTRUM</a
           >
-          <div class="flex items-center gap-4">
+            SPECTRUM
+          </a>
+
+          <!-- Navigation Links -->
+          <div class="hidden md:flex items-center gap-6">
+            <a
+              href="/guess"
+              class="text-muted hover:text-white text-sm font-medium transition-all duration-200 hover:scale-105"
+            >
+              Guess
+            </a>
+            <a
+              href="/leaderboard"
+              class="text-muted hover:text-white text-sm font-medium transition-all duration-200 hover:scale-105"
+            >
+              Leaderboard
+            </a>
+            <a
+              href="/about"
+              class="text-muted hover:text-white text-sm font-medium transition-all duration-200 hover:scale-105"
+            >
+              About
+            </a>
+          </div>
+
+          <!-- Right Side -->
+          <div class="flex items-center gap-3">
+            <!-- Admin Panel -->
+            {
+              user.isAdmin && (
+                <a
+                  href="/admin"
+                  class="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-red-500/25"
+                >
+                  Admin
+                </a>
+              )
+            }
+
             <!-- User Dropdown -->
             <div class="relative">
               <button
@@ -79,7 +117,7 @@ const userStats = {
                 />
                 <span class="text-white text-sm">{user.name}</span>
                 <svg
-                  class="w-4 h-4 text-muted"
+                  class="w-4 h-4 text-muted transition-transform duration-200"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -113,32 +151,23 @@ const userStats = {
                     <p class="text-muted text-xs">Account</p>
                     <p class="text-white text-sm mt-1">{user.email}</p>
                   </div>
+                  <div class="border-t border-gray-700 pt-3 mt-3">
+                    <div class="mb-3">
+                      <!-- <p class="text-muted text-xs mb-2">Profile Visibility</p> -->
+                      <PublicToggle
+                        client:load
+                        initialIsPublic={userStats.isPublic}
+                        initialPublicUsername={userStats.publicUsername}
+                      />
+                    </div>
+                    <SignOut
+                      class="w-full text-left bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-sm font-medium py-2 px-3 rounded-lg transition-all duration-200 hover:cursor-pointer"
+                    >
+                      Sign out
+                    </SignOut>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {
-              user.isAdmin && (
-                <a
-                  href="/admin"
-                  class="bg-red-400 text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent/90 transition-colors"
-                >
-                  Admin Panel
-                </a>
-              )
-            }
-            <div class="flex items-center gap-4">
-              <PublicToggle
-                client:load
-                initialIsPublic={userStats.isPublic}
-                initialPublicUsername={userStats.publicUsername}
-              />
-
-              <SignOut
-                class="text-muted hover:text-white text-sm hover:cursor-pointer"
-              >
-                Sign out
-              </SignOut>
             </div>
           </div>
         </div>
@@ -392,11 +421,20 @@ const userStats = {
   document.addEventListener("DOMContentLoaded", function () {
     const dropdownButton = document.getElementById("userDropdown");
     const dropdownMenu = document.getElementById("userDropdownMenu");
+    const dropdownArrow = dropdownButton?.querySelector("svg");
 
     // Toggle dropdown when button is clicked
     dropdownButton?.addEventListener("click", function (e) {
       e.stopPropagation();
-      dropdownMenu?.classList.toggle("hidden");
+      const isHidden = dropdownMenu?.classList.contains("hidden");
+
+      if (isHidden) {
+        dropdownMenu?.classList.remove("hidden");
+        dropdownArrow?.classList.add("rotate-180");
+      } else {
+        dropdownMenu?.classList.add("hidden");
+        dropdownArrow?.classList.remove("rotate-180");
+      }
     });
 
     // Close dropdown when clicking outside
@@ -407,6 +445,7 @@ const userStats = {
         !dropdownMenu?.contains(target)
       ) {
         dropdownMenu?.classList.add("hidden");
+        dropdownArrow?.classList.remove("rotate-180");
       }
     });
 
@@ -414,6 +453,7 @@ const userStats = {
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") {
         dropdownMenu?.classList.add("hidden");
+        dropdownArrow?.classList.remove("rotate-180");
       }
     });
   });

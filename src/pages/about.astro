@@ -1,0 +1,203 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import { getSession } from "auth-astro/server";
+
+const session = await getSession(Astro.request);
+---
+
+<Layout title="About - Spectrum">
+  <div class="min-h-screen bg-black">
+    <Header>
+      {
+        session ? (
+          <a
+            href="/dashboard"
+            class="bg-accent text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent/90 transition-colors"
+          >
+            Dashboard
+          </a>
+        ) : (
+          <a
+            href="/login"
+            class="bg-accent text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent/90 transition-colors"
+          >
+            Get Started
+          </a>
+        )
+      }
+    </Header>
+
+    <!-- Main -->
+    <main class="max-w-4xl mx-auto px-6 py-16">
+      <!-- Hero Section -->
+      <div class="text-center mb-16">
+        <h1 class="text-5xl font-bold text-white mb-6">
+          So what's <span class="text-accent">Spectrum</span> anyway?
+        </h1>
+        <p class="text-xl text-muted max-w-2xl mx-auto">
+          I wanted to guess prices. Here, you guess prices. Amazing, right?
+        </p>
+      </div>
+
+      <!-- How It Works -->
+      <div class="mb-16">
+        <h2 class="text-3xl font-bold text-white mb-8 text-center">
+          How it works
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div class="bg-card rounded-lg p-6 text-center">
+            <div
+              class="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-4"
+            >
+              <svg
+                class="w-8 h-8 text-accent"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-white mb-2">
+              1. You get an item
+            </h3>
+            <p class="text-muted">
+              Real stuff from Amazon, Best Buy, or whatever (you'll see).
+            </p>
+          </div>
+
+          <div class="bg-card rounded-lg p-6 text-center">
+            <div
+              class="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-4"
+            >
+              <svg
+                class="w-8 h-8 text-accent"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-white mb-2">
+              2. You guess the price
+            </h3>
+            <p class="text-muted">Not really much more I can say here!</p>
+          </div>
+
+          <div class="bg-card rounded-lg p-6 text-center">
+            <div
+              class="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-4"
+            >
+              <svg
+                class="w-8 h-8 text-accent"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-white mb-2">
+              3. You find out how wrong you were
+            </h3>
+            <p class="text-muted">
+              Get your accuracy score - you'll be surprised.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features -->
+      <div class="mb-16">
+        <h2 class="text-3xl font-bold text-white mb-8 text-center">
+          Why it's actually fun
+        </h2>
+        <div class="space-y-6">
+          <div class="bg-card rounded-lg p-6">
+            <h3 class="text-xl font-semibold text-white mb-3">
+              Real products, real prices
+            </h3>
+            <p class="text-muted">
+              These are actual items you could buy right now from Amazon, Best
+              Buy, and other places.
+            </p>
+          </div>
+
+          <div class="bg-card rounded-lg p-6">
+            <h3 class="text-xl font-semibold text-white mb-3">
+              Track your progress
+            </h3>
+            <p class="text-muted">See if you're getting better over time.</p>
+          </div>
+
+          <div class="bg-card rounded-lg p-6">
+            <h3 class="text-xl font-semibold text-white mb-3">
+              Compete with others
+            </h3>
+            <p class="text-muted">
+              You can see other people's stats on their profile pages.
+            </p>
+          </div>
+
+          <div class="bg-card rounded-lg p-6">
+            <h3 class="text-xl font-semibold text-white mb-3">
+              Challenge your friends
+            </h3>
+            <p class="text-muted">
+              Send out public challenges for anybody to see how they do against
+              you!
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA Section -->
+      <div
+        class="bg-gradient-to-br from-accent/20 to-accent/5 rounded-xl p-8 text-center border border-accent/20"
+      >
+        <h2 class="text-2xl font-bold text-white mb-4">Ready to try?</h2>
+        <p class="text-muted mb-6">
+          Find out if you're secretly a price genius.
+        </p>
+        {
+          session ? (
+            <a
+              href="/guess"
+              class="inline-block bg-accent text-black px-8 py-3 rounded-lg text-lg font-semibold hover:bg-accent/90 transition-colors"
+            >
+              Let's do this
+            </a>
+          ) : (
+            <a
+              href="/login"
+              class="inline-block bg-accent text-black px-8 py-3 rounded-lg text-lg font-semibold hover:bg-accent/90 transition-colors"
+            >
+              Sign me up
+            </a>
+          )
+        }
+      </div>
+    </main>
+  </div>
+</Layout>

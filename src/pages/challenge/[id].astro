@@ -125,7 +125,7 @@ try {
                       href={item.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      class="hidden inline-flex items-center text-accent hover:text-accent/80 transition-colors font-medium text-lg"
+                      class="hidden items-center text-accent hover:text-accent/80 transition-colors font-medium text-lg"
                     >
                       <svg
                         class="w-5 h-5 mr-2"
@@ -504,6 +504,7 @@ try {
         // Show the "View Original" link
         if (viewOriginalLink) {
           viewOriginalLink.classList.remove("hidden");
+          viewOriginalLink.classList.add("inline-flex");
         }
 
         // Disable further submissions
