@@ -2,6 +2,7 @@ import { writeFile } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import pLimit from "p-limit";
+import { rewriteTitles } from "./lib/title-rewriter";
 
 interface FakeStoreProduct {
   id: number;
@@ -154,6 +155,7 @@ async function main() {
       throw new Error("No items were collected");
     }
 
+    await rewriteTitles(items);
     await writeScrapedData(items);
 
     console.log("\n✅ Product collection completed successfully!");

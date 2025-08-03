@@ -1,0 +1,524 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+const { id } = Astro.params;
+
+let challenge;
+let item;
+let errorMessage = null;
+
+try {
+  const baseUrl = Astro.url.origin;
+  const response = await fetch(`${baseUrl}/api/challenge/${id}`, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  const result = await response.json();
+
+  if (result.success) {
+    challenge = result.data.challenge;
+    item = result.data.item;
+  } else {
+    errorMessage = result.message || result.error || "Challenge not found";
+  }
+} catch (error) {
+  console.error("Failed to fetch challenge:", error);
+  errorMessage = "Failed to connect to server";
+}
+---
+
+<Layout title="Challenge - Spectrum">
+  <div class="min-h-screen bg-black text-white">
+    <!-- Toast notification container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Minimal Header -->
+    <header class="bg-card/50 backdrop-blur-sm">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="flex justify-between items-center h-16">
+          <a
+            href="/"
+            class="text-xl font-bold text-white hover:text-accent transition-colors"
+          >
+            SPECTRUM
+          </a>
+          <div class="text-muted text-sm">
+            Challenge by <a
+              href={`/user/${challenge?.originalUsername || ""}`}
+              class="text-accent hover:text-accent/80 transition-colors"
+              >@{challenge?.originalUsername || "Unknown"}</a
+            >
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="container mx-auto px-6">
+      <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-16">
+          <!-- <p class="text-muted text-xl mb-8">
+            Challenge from <a
+              href={`/user/${challenge?.originalUsername || ""}`}
+              class="text-accent hover:text-accent/80 transition-colors"
+              >@{challenge?.originalUsername || "Unknown"}</a
+            >
+          </p> -->
+
+          {
+            errorMessage && (
+              <div class="mt-8 bg-card border border-red-500/30 rounded-xl p-6">
+                <div class="flex items-center justify-center gap-3 mb-4">
+                  <svg
+                    class="w-8 h-8 text-red-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"
+                    />
+                  </svg>
+                  <h3 class="text-xl font-bold text-red-400">
+                    Challenge Not Found
+                  </h3>
+                </div>
+                <p class="text-muted text-lg mb-4">{errorMessage}</p>
+                <a
+                  href="/"
+                  class="inline-block bg-accent text-black font-bold py-3 px-6 rounded-lg transition-colors hover:bg-accent/90"
+                >
+                  Go Home
+                </a>
+              </div>
+            )
+          }
+        </div>
+
+        {
+          !errorMessage && item && challenge && (
+            <div class="bg-card rounded-xl p-10 mb-10 border border-gray-700 shadow-xl">
+              <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div class="space-y-6">
+                  <div class="relative group">
+                    <div class="absolute inset-0 bg-gradient-to-r from-accent to-accent/60 rounded-xl blur opacity-20 group-hover:opacity-30 transition-opacity" />
+                    <div class="relative bg-gray-800 rounded-xl p-2 border border-gray-700">
+                      <img
+                        src={
+                          item.photoUrl ||
+                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239CA3AF' font-family='Inter' font-size='16'%3EProduct Image%3C/text%3E%3C/svg%3E"
+                        }
+                        alt={item.title}
+                        class="w-full max-h-96 object-contain rounded-lg"
+                      />
+                    </div>
+                  </div>
+                  <div class="text-center space-y-4">
+                    <h2 class="text-2xl font-semibold text-white leading-tight">
+                      {item.title}
+                    </h2>
+                    <a
+                      id="view-original-link"
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="hidden inline-flex items-center text-accent hover:text-accent/80 transition-colors font-medium text-lg"
+                    >
+                      <svg
+                        class="w-5 h-5 mr-2"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fill-rule="evenodd"
+                          d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
+                          clip-rule="evenodd"
+                        />
+                      </svg>
+                      View Original
+                    </a>
+                  </div>
+                </div>
+
+                <div class="space-y-8">
+                  <div class="space-y-6">
+                    <label
+                      for="price-guess"
+                      class="block text-2xl font-bold text-white"
+                    >
+                      Your Price Guess
+                    </label>
+                    <div class="relative">
+                      <span class="absolute left-6 top-1/2 transform -translate-y-1/2 text-muted text-2xl font-bold">
+                        $
+                      </span>
+                      <input
+                        type="number"
+                        id="price-guess"
+                        name="price-guess"
+                        step="0.01"
+                        min="0"
+                        max={challenge?.maxPrice || 1000}
+                        placeholder="0.00"
+                        class="w-full pl-14 pr-6 py-6 bg-gray-800 border-2 border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-accent text-2xl font-bold transition-colors"
+                      />
+                    </div>
+
+                    <div class="space-y-4">
+                      <div class="flex justify-between items-center">
+                        <span class="text-muted font-medium">Quick Select</span>
+                        <span class="text-muted font-medium">
+                          Max: ${challenge?.maxPrice || 1000}
+                        </span>
+                      </div>
+                      <div class="relative">
+                        <input
+                          type="range"
+                          id="price-slider"
+                          min="0"
+                          max={challenge?.maxPrice || 1000}
+                          step="0.01"
+                          value="0"
+                          class="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                        />
+                        <div class="flex justify-between text-sm text-muted mt-3 font-medium">
+                          <span>$0</span>
+                          <span>
+                            ${Math.round((challenge?.maxPrice || 1000) / 2)}
+                          </span>
+                          <span>${challenge?.maxPrice || 1000}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    id="submit-guess"
+                    class="w-full bg-accent hover:bg-accent/90 text-black font-bold py-5 px-8 rounded-xl transition-all duration-200 transform hover:scale-105 text-xl border-2 border-accent hover:border-accent/90 shadow-lg hover:shadow-accent/25 hover:cursor-pointer"
+                  >
+                    SUBMIT GUESS
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        }
+
+        <!-- Results section (hidden by default) -->
+        <div
+          id="results"
+          class="bg-card rounded-xl p-10 hidden border border-gray-700 shadow-xl"
+        >
+          <h3 class="text-4xl font-bold text-center mb-12 text-white">
+            RESULTS
+          </h3>
+          <div class="grid md:grid-cols-2 gap-8 mb-8">
+            <div
+              class="bg-gray-800 rounded-xl p-8 text-center border border-gray-700"
+            >
+              <div class="text-muted mb-4 text-lg font-medium">YOUR GUESS</div>
+              <div id="user-guess" class="text-4xl font-bold text-white">
+                $0.00
+              </div>
+            </div>
+            <div
+              class="bg-gray-800 rounded-xl p-8 text-center border border-gray-700"
+            >
+              <div class="text-muted mb-4 text-lg font-medium">
+                ACTUAL PRICE
+              </div>
+              <div id="actual-price" class="text-4xl font-bold text-accent">
+                $0.00
+              </div>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-8 mb-8">
+            <div
+              class="bg-gray-800 rounded-xl p-8 text-center border border-gray-700"
+            >
+              <div class="text-muted mb-4 text-lg font-medium">
+                YOUR ACCURACY
+              </div>
+              <div id="accuracy" class="text-4xl font-bold text-orange-400">
+                0%
+              </div>
+            </div>
+            <div
+              class="bg-gray-800 rounded-xl p-8 text-center border border-gray-700"
+            >
+              <div class="text-muted mb-4 text-lg font-medium">
+                {challenge?.originalUsername || "Unknown"}'s ACCURACY
+              </div>
+              <div
+                id="challenge-accuracy"
+                class="text-4xl font-bold text-blue-400"
+              >
+                {challenge?.originalAccuracy || 0}%
+              </div>
+            </div>
+          </div>
+
+          <div class="text-center space-y-4">
+            <div
+              id="comparison-result"
+              class="text-2xl font-bold text-white mb-6"
+            >
+              Loading...
+            </div>
+            <a
+              href="/"
+              class="inline-block bg-accent text-black font-bold py-4 px-10 rounded-xl transition-all duration-200 text-lg border-2 border-accent hover:border-accent/90"
+            >
+              PLAY MORE →
+            </a>
+          </div>
+        </div>
+
+        <!-- Loading state -->
+        <div id="loading" class="text-center hidden">
+          <div
+            class="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-green-500 mb-6"
+          >
+          </div>
+          <p class="text-xl text-gray-300 font-medium">
+            Calculating your score...
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .slider {
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #00ff88;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4);
+      border: 2px solid #00cc6a;
+    }
+
+    .slider::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #00ff88;
+      cursor: pointer;
+      border: 2px solid #00cc6a;
+      box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4);
+    }
+
+    .slider::-webkit-slider-track {
+      background: linear-gradient(to right, #374151, #00ff88);
+      height: 12px;
+      border-radius: 6px;
+    }
+
+    .slider::-moz-range-track {
+      background: linear-gradient(to right, #374151, #00ff88);
+      height: 12px;
+      border-radius: 6px;
+      border: none;
+    }
+
+    .toast {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 12px;
+      padding: 16px 20px;
+      min-width: 300px;
+      max-width: 400px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      transform: translateX(100%);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+
+    .toast.show {
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    .toast.error {
+      border-color: #dc2626;
+      background: #1f2937;
+    }
+
+    .toast.error .toast-icon {
+      color: #ef4444;
+    }
+
+    .toast.warning {
+      border-color: #d97706;
+      background: #1f2937;
+    }
+
+    .toast.warning .toast-icon {
+      color: #f59e0b;
+    }
+
+    .toast.success {
+      border-color: #059669;
+      background: #1f2937;
+    }
+
+    .toast.success .toast-icon {
+      color: #10b981;
+    }
+  </style>
+
+  <script define:vars={{ item, challenge }}>
+    const submitButton = document.getElementById("submit-guess");
+    const priceInput = document.getElementById("price-guess");
+    const priceSlider = document.getElementById("price-slider");
+    const resultsDiv = document.getElementById("results");
+    const loadingDiv = document.getElementById("loading");
+    const userGuessSpan = document.getElementById("user-guess");
+    const actualPriceSpan = document.getElementById("actual-price");
+    const accuracySpan = document.getElementById("accuracy");
+    const challengeAccuracySpan = document.getElementById("challenge-accuracy");
+    const comparisonResultSpan = document.getElementById("comparison-result");
+    const viewOriginalLink = document.getElementById("view-original-link");
+
+    function showToast(message, type = "error") {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = `toast ${type}`;
+
+      const icons = {
+        error: `<svg class="w-5 h-5 toast-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>`,
+        warning: `<svg class="w-5 h-5 toast-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>`,
+        success: `<svg class="w-5 h-5 toast-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>`,
+      };
+
+      toast.innerHTML = `
+        <div class="flex items-start gap-3">
+          ${icons[type]}
+          <div class="flex-1">
+            <p class="text-white font-medium">${message}</p>
+          </div>
+          <button class="text-gray-400 hover:text-white transition-colors" onclick="this.parentElement.parentElement.remove()">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      `;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add("show");
+      }, 100);
+
+      setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => {
+          if (toast.parentElement) {
+            toast.remove();
+          }
+        }, 300);
+      }, 5000);
+    }
+
+    // Sync slider and input
+    priceSlider?.addEventListener("input", () => {
+      if (priceInput) {
+        priceInput.value = priceSlider.value;
+      }
+    });
+
+    priceInput?.addEventListener("input", () => {
+      if (priceSlider) {
+        priceSlider.value = priceInput.value;
+      }
+    });
+
+    submitButton?.addEventListener("click", async () => {
+      const guess = parseFloat(priceInput?.value || "0");
+
+      if (!guess || guess <= 0) {
+        showToast("Please enter a valid price", "warning");
+        return;
+      }
+
+      // Show loading state
+      loadingDiv?.classList.remove("hidden");
+      if (submitButton) submitButton.disabled = true;
+
+      try {
+        // Calculate accuracy client-side
+        const actualPrice = item.actualPrice;
+        const accuracy = Math.max(
+          0,
+          Math.round((1 - Math.abs(guess - actualPrice) / actualPrice) * 100)
+        );
+
+        // Update results display
+        if (userGuessSpan) userGuessSpan.textContent = `$${guess.toFixed(2)}`;
+        if (actualPriceSpan)
+          actualPriceSpan.textContent = `$${actualPrice.toFixed(2)}`;
+        if (accuracySpan) accuracySpan.textContent = `${accuracy}%`;
+
+        // Show comparison result
+        if (comparisonResultSpan) {
+          const challengeAccuracy = challenge.originalAccuracy;
+          if (accuracy > challengeAccuracy) {
+            comparisonResultSpan.textContent = `🎉 You beat @${challenge.originalUsername} by ${accuracy - challengeAccuracy}%!`;
+            comparisonResultSpan.className =
+              "text-2xl font-bold text-green-400 mb-6";
+          } else if (accuracy < challengeAccuracy) {
+            comparisonResultSpan.textContent = `😔 @${challenge.originalUsername} beat you by ${challengeAccuracy - accuracy}%`;
+            comparisonResultSpan.className =
+              "text-2xl font-bold text-red-400 mb-6";
+          } else {
+            comparisonResultSpan.textContent = `🤝 You tied with @${challenge.originalUsername}!`;
+            comparisonResultSpan.className =
+              "text-2xl font-bold text-yellow-400 mb-6";
+          }
+        }
+
+        // Hide loading and show results
+        loadingDiv?.classList.add("hidden");
+        resultsDiv?.classList.remove("hidden");
+
+        // Show the "View Original" link
+        if (viewOriginalLink) {
+          viewOriginalLink.classList.remove("hidden");
+        }
+
+        // Disable further submissions
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.textContent = "GUESS SUBMITTED";
+        }
+        if (priceInput) priceInput.disabled = true;
+        if (priceSlider) priceSlider.disabled = true;
+      } catch (error) {
+        console.error("Error calculating result:", error);
+        showToast("Error calculating result. Please try again.", "error");
+        loadingDiv?.classList.add("hidden");
+        if (submitButton) submitButton.disabled = false;
+      }
+    });
+  </script>
+</Layout>

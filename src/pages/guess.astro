@@ -54,7 +54,7 @@ try {
     <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
     <!-- Minimal Header -->
-    <header class="border-b border-gray-800 bg-card/50 backdrop-blur-sm">
+    <header class="bg-card/50 backdrop-blur-sm">
       <div class="max-w-7xl mx-auto px-6">
         <div class="flex justify-between items-center h-16">
           <a
@@ -85,14 +85,9 @@ try {
       </div>
     </header>
 
-    <div class="container mx-auto px-6 py-12">
+    <div class="container mx-auto px-6">
       <div class="max-w-4xl mx-auto">
         <div class="text-center mb-16">
-          <h1 class="text-6xl font-bold mb-6 text-white tracking-tight">
-            SPECTRUM
-          </h1>
-          <!-- <p class="text-muted text-xl mb-8">Test your price intuition</p> -->
-
           {
             errorMessage && (
               <div class="mt-8 bg-card border border-red-500/30 rounded-xl p-6">
@@ -273,15 +268,24 @@ try {
           </div>
           <div class="mt-12 text-center space-y-4">
             <div class="text-muted mb-4">
-              <span id="countdown">10</span> seconds until next item...
+              <span id="countdown">30</span> seconds until next item...
             </div>
-            <button
-              type="button"
-              id="next-item"
-              class="bg-accent hover:bg-accent/90 text-black font-bold py-4 px-10 rounded-xl transition-all duration-200 text-lg border-2 border-accent hover:border-accent/90"
-            >
-              NEXT ITEM NOW →
-            </button>
+            <div class="flex gap-4 justify-center">
+              <button
+                type="button"
+                id="share-result"
+                class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 px-8 rounded-xl transition-all duration-200 text-lg border-2 border-gray-600 hover:border-gray-500"
+              >
+                SHARE CHALLENGE
+              </button>
+              <button
+                type="button"
+                id="next-item"
+                class="bg-accent hover:bg-accent/90 text-black font-bold py-4 px-10 rounded-xl transition-all duration-200 text-lg border-2 border-accent hover:border-accent/90"
+              >
+                NEXT ITEM NOW →
+              </button>
+            </div>
             {
               user.isAdmin && item?.id && (
                 <div class="pt-4">
@@ -307,6 +311,118 @@ try {
                 </div>
               )
             }
+          </div>
+        </div>
+
+        <!-- Share Modal -->
+        <div
+          id="share-modal"
+          class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden"
+        >
+          <div class="flex items-center justify-center min-h-screen p-6">
+            <div
+              class="bg-card rounded-xl p-8 max-w-md w-full border border-gray-700 shadow-2xl"
+            >
+              <div class="text-center space-y-6">
+                <div class="flex items-center justify-center gap-3 mb-6">
+                  <svg
+                    class="w-8 h-8 text-accent"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
+                    ></path>
+                  </svg>
+                  <h3 class="text-2xl font-bold text-white">
+                    Share Your Result
+                  </h3>
+                </div>
+
+                <div id="share-content" class="space-y-4">
+                  <div
+                    class="bg-gray-800 rounded-lg p-4 border border-gray-700"
+                  >
+                    <div class="text-muted text-sm mb-2">Your Score</div>
+                    <div
+                      id="share-accuracy"
+                      class="text-3xl font-bold text-accent"
+                    >
+                      0%
+                    </div>
+                    <div class="text-muted text-sm mt-1">
+                      Guess: <span id="share-guess">$0.00</span> | Actual: <span
+                        id="share-actual">$0.00</span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="text-muted text-sm">
+                    Challenge your friends to beat your score!
+                  </div>
+                </div>
+
+                <div id="share-actions" class="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    id="share-copy"
+                    class="flex-1 bg-accent hover:bg-accent/90 text-black font-bold py-3 px-4 rounded-lg transition-colors"
+                  >
+                    Copy Challenge Link
+                  </button>
+                </div>
+
+                <!-- Public profile required message (hidden by default) -->
+                <div id="public-profile-required" class="space-y-4 hidden">
+                  <div
+                    class="bg-gray-800 rounded-lg p-6 border border-yellow-500/30"
+                  >
+                    <div class="flex items-center justify-center gap-3 mb-4">
+                      <svg
+                        class="w-8 h-8 text-yellow-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"
+                        ></path>
+                      </svg>
+                      <h3 class="text-xl font-bold text-yellow-400">
+                        Public Profile Required
+                      </h3>
+                    </div>
+                    <p class="text-muted text-center mb-4">
+                      You need a public profile to create challenges and share
+                      your results with friends.
+                    </p>
+                    <div class="text-center">
+                      <a
+                        href="/dashboard"
+                        class="inline-block bg-accent text-black font-bold py-3 px-6 rounded-lg transition-colors hover:bg-accent/90"
+                      >
+                        Make Profile Public
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  id="close-share-modal"
+                  class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -423,6 +539,18 @@ try {
     const accuracySpan = document.getElementById("accuracy");
     const amazonLink = document.getElementById("amazon-link");
     const countdownSpan = document.getElementById("countdown");
+    const shareModal = document.getElementById("share-modal");
+    const shareResultBtn = document.getElementById("share-result");
+    const closeShareModalBtn = document.getElementById("close-share-modal");
+    const shareAccuracy = document.getElementById("share-accuracy");
+    const shareGuess = document.getElementById("share-guess");
+    const shareActual = document.getElementById("share-actual");
+    const shareCopyBtn = document.getElementById("share-copy");
+    const shareContent = document.getElementById("share-content");
+    const shareActions = document.getElementById("share-actions");
+    const publicProfileRequired = document.getElementById(
+      "public-profile-required"
+    );
 
     function showToast(message, type = "error") {
       const container = document.getElementById("toast-container");
@@ -536,8 +664,8 @@ try {
         if (priceInput) priceInput.disabled = true;
         if (priceSlider) priceSlider.disabled = true;
 
-        // Auto-load next item after 3 seconds with countdown
-        let countdown = 10;
+        // auto-load next item after 30 seconds with countdown
+        let countdown = 30;
         countdownInterval = setInterval(() => {
           countdown--;
           if (countdownSpan) countdownSpan.textContent = countdown.toString();
@@ -589,6 +717,142 @@ try {
         showToast("Error loading next item. Please try again.", "error");
         loadingDiv?.classList.add("hidden");
         if (nextButton) nextButton.disabled = false;
+      }
+    });
+
+    // share!!
+    shareResultBtn?.addEventListener("click", async () => {
+      if (shareModal) {
+        shareModal.classList.remove("hidden");
+
+        // check for existing
+        try {
+          const profileResponse = await fetch("/api/user/profile", {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          const profileResult = await profileResponse.json();
+
+          if (
+            profileResult.success &&
+            profileResult.data.isPublic &&
+            profileResult.data.publicUsername
+          ) {
+            // user has public profile - show normal share content
+            if (shareContent) shareContent.classList.remove("hidden");
+            if (shareActions) shareActions.classList.remove("hidden");
+            if (publicProfileRequired)
+              publicProfileRequired.classList.add("hidden");
+
+            if (shareAccuracy && accuracySpan) {
+              shareAccuracy.textContent = accuracySpan.textContent;
+            }
+            if (shareGuess && userGuessSpan) {
+              shareGuess.textContent = userGuessSpan.textContent;
+            }
+            if (shareActual && actualPriceSpan) {
+              shareActual.textContent = actualPriceSpan.textContent;
+            }
+
+            // auto create challenge when modal opens
+            if (item?.id) {
+              const guess = parseFloat(
+                userGuessSpan?.textContent?.replace("$", "") || "0"
+              );
+              const accuracy = parseInt(
+                accuracySpan?.textContent?.replace("%", "") || "0"
+              );
+
+              try {
+                const response = await fetch("/api/challenge/create", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    itemId: item.id,
+                    guess: guess,
+                    accuracy: accuracy,
+                    maxPrice: item.maxPrice,
+                  }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                  // store the challenge URL for copying
+                  if (shareCopyBtn) {
+                    shareCopyBtn.dataset.challengeUrl =
+                      result.data.challengeUrl;
+                  }
+                } else {
+                  console.error("Failed to create challenge:", result.error);
+                  showToast(
+                    result.error || "Failed to create challenge",
+                    "error"
+                  );
+                }
+              } catch (error) {
+                console.error("Error creating challenge:", error);
+              }
+            }
+          } else {
+            if (shareContent) shareContent.classList.add("hidden");
+            if (shareActions) shareActions.classList.add("hidden");
+            if (publicProfileRequired)
+              publicProfileRequired.classList.remove("hidden");
+          }
+        } catch (error) {
+          console.error("Error checking profile status:", error);
+          // fallback + shouldn't happen ideally
+          if (shareContent) shareContent.classList.add("hidden");
+          if (shareActions) shareActions.classList.add("hidden");
+          if (publicProfileRequired)
+            publicProfileRequired.classList.remove("hidden");
+        }
+      }
+    });
+
+    // copy link functionality
+    shareCopyBtn?.addEventListener("click", async () => {
+      const challengeUrl = shareCopyBtn.dataset.challengeUrl;
+
+      if (challengeUrl) {
+        try {
+          await navigator.clipboard.writeText(challengeUrl);
+          showToast("Challenge link copied to clipboard!", "success");
+        } catch (error) {
+          console.error("Error copying to clipboard:", error);
+          showToast("Failed to copy link. Please copy manually.", "error");
+        }
+      } else {
+        showToast("Challenge link not available", "error");
+      }
+    });
+
+    closeShareModalBtn?.addEventListener("click", () => {
+      if (shareModal) {
+        shareModal.classList.add("hidden");
+      }
+    });
+
+    // close on outside click
+    shareModal?.addEventListener("click", (e) => {
+      if (e.target === shareModal) {
+        shareModal.classList.add("hidden");
+      }
+    });
+
+    // close on escape key
+    document.addEventListener("keydown", (e) => {
+      if (
+        e.key === "Escape" &&
+        shareModal &&
+        !shareModal.classList.contains("hidden")
+      ) {
+        shareModal.classList.add("hidden");
       }
     });
   </script>

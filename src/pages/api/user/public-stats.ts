@@ -1,138 +1,84 @@
 import type { APIRoute } from "astro";
-import { getSession } from "auth-astro/server";
-import { db, Users, eq, sql } from "astro:db";
-import {
-  generateRandomUsername,
-  isUsernameAvailable,
-  validateUsername,
-} from "../../../lib/username.js";
-import {
-  isValidEmail,
-  sanitizeUsername,
-} from "../../../lib/input-sanitization.js";
+import { db, Users, UserGuesses, Items, count, eq, sql, desc } from "astro:db";
 
-export const POST: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ url }) => {
   try {
-    const session = await getSession(request);
+    const username = url.searchParams.get("username");
 
-    if (!session?.user?.email) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!isValidEmail(session.user.email)) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Invalid email format" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    let requestBody;
-    try {
-      requestBody = await request.json();
-    } catch (error) {
+    if (!username) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Invalid JSON in request body",
+          error: "Username parameter required",
         }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    const { isPublic, username } = requestBody;
-
-    if (typeof isPublic !== "boolean") {
-      return new Response(
-        JSON.stringify({ success: false, error: "isPublic must be a boolean" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    if (username !== undefined && typeof username !== "string") {
-      return new Response(
-        JSON.stringify({ success: false, error: "Username must be a string" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    const sanitizedUsername = username ? sanitizeUsername(username) : null;
-
-    const currentUser = await db
+    const user = await db
       .select()
       .from(Users)
-      .where(eq(Users.email, session.user.email))
+      .where(eq(Users.publicUsername, username))
       .get();
 
-    if (!currentUser) {
+    if (!user || !user.isPublic) {
       return new Response(
-        JSON.stringify({ success: false, error: "User not found" }),
+        JSON.stringify({
+          success: false,
+          error: "User not found or not public",
+        }),
         { status: 404, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    let publicUsername = currentUser.publicUsername;
+    const totalGuesses = await db
+      .select({ count: count() })
+      .from(UserGuesses)
+      .where(eq(UserGuesses.userId, user.email));
 
-    if (isPublic && !publicUsername) {
-      if (sanitizedUsername) {
-        const validation = validateUsername(sanitizedUsername);
-        if (!validation.valid) {
-          return new Response(
-            JSON.stringify({ success: false, error: validation.error }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
-          );
-        }
+    const bestAccuracy = await db
+      .select({ max: sql<number>`MAX(${UserGuesses.accuracy})` })
+      .from(UserGuesses)
+      .where(eq(UserGuesses.userId, user.email));
 
-        const available = await isUsernameAvailable(sanitizedUsername);
-        if (!available) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: "Username is already taken",
-            }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
-          );
-        }
+    const averageAccuracy = await db
+      .select({ avg: sql<number>`AVG(${UserGuesses.accuracy})` })
+      .from(UserGuesses)
+      .where(eq(UserGuesses.userId, user.email));
 
-        publicUsername = sanitizedUsername;
-      } else {
-        publicUsername = await generateRandomUsername();
+    const recentGuesses = await db
+      .select({
+        id: UserGuesses.id,
+        guess: UserGuesses.guess,
+        accuracy: UserGuesses.accuracy,
+        submittedAt: UserGuesses.submittedAt,
+        itemId: UserGuesses.itemId,
+        itemTitle: Items.title,
+      })
+      .from(UserGuesses)
+      .leftJoin(Items, eq(UserGuesses.itemId, Items.id))
+      .where(eq(UserGuesses.userId, user.email))
+      .orderBy(desc(UserGuesses.submittedAt))
+      .limit(10);
 
-        let attempts = 0;
-        while (!(await isUsernameAvailable(publicUsername)) && attempts < 10) {
-          publicUsername = await generateRandomUsername();
-          attempts++;
-        }
+    const stats = {
+      username: user.publicUsername,
+      totalGuesses: totalGuesses[0]?.count || 0,
+      bestAccuracy: bestAccuracy[0]?.max || 0,
+      averageAccuracy: averageAccuracy[0]?.avg || 0,
+      recentGuesses: recentGuesses.map((guess) => ({
+        id: guess.id,
+        guess: guess.guess,
+        accuracy: guess.accuracy || 0,
+        submittedAt: guess.submittedAt.toISOString(),
+        itemTitle: guess.itemTitle || "Amazon Item",
+      })),
+    };
 
-        if (attempts >= 10) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: "Unable to generate unique username",
-            }),
-            { status: 500, headers: { "Content-Type": "application/json" } }
-          );
-        }
-      }
-    }
-
-    await db.run(sql`
-      UPDATE users 
-      SET isPublic = ${isPublic}, 
-          publicUsername = ${publicUsername || null}, 
-          updatedAt = datetime('now')
-      WHERE email = ${session.user.email}
-    `);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: { isPublic, publicUsername },
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: true, data: stats }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Public Stats API Error:", error);
     return new Response(

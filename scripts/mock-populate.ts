@@ -1,6 +1,7 @@
 import { writeFile } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { rewriteTitles } from "./lib/title-rewriter";
 
 interface MockProduct {
   link: string;
@@ -133,6 +134,8 @@ async function main() {
     console.log("Generating mock product data...");
 
     const products = generateMockProducts(150);
+
+    await rewriteTitles(products);
 
     const outputPath = join(
       dirname(fileURLToPath(import.meta.url)),

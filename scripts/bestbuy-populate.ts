@@ -4,6 +4,7 @@ import { writeFile } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import ProgressBar from "progress";
+import { rewriteTitles } from "./lib/title-rewriter";
 
 const SEARCH_TERMS = [
   "laptop",
@@ -258,6 +259,7 @@ async function main() {
       throw new Error("No items were collected");
     }
 
+    await rewriteTitles(items);
     await writeScrapedData(items);
 
     console.log("\nProduct collection completed successfully!");

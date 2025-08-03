@@ -27,7 +27,7 @@ const PublicToggle: React.FC<PublicToggleProps> = ({
       // Disable public profile
       try {
         setLoading(true);
-        const response = await fetch("/api/user/public-stats", {
+        const response = await fetch("/api/user/profile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ isPublic: false }),
@@ -50,7 +50,7 @@ const PublicToggle: React.FC<PublicToggleProps> = ({
       } else {
         try {
           setLoading(true);
-          const response = await fetch("/api/user/public-stats", {
+          const response = await fetch("/api/user/profile", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ isPublic: true }),
@@ -75,7 +75,7 @@ const PublicToggle: React.FC<PublicToggleProps> = ({
     if (loading) return;
     try {
       setLoading(true);
-      const response = await fetch("/api/user/public-stats", {
+      const response = await fetch("/api/user/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -160,12 +160,17 @@ const PublicToggle: React.FC<PublicToggleProps> = ({
         >
           <div className="bg-card rounded-xl p-8 max-w-md w-full mx-4 border border-accent/20">
             <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold text-white mb-2">Choose Your Username</h3>
+              <h3 className="text-2xl font-bold text-white mb-2">
+                Choose Your Username
+              </h3>
               <p className="text-muted">This will be your public profile URL</p>
             </div>
             <div className="space-y-4">
               <div>
-                <label htmlFor="username-input" className="block text-white text-sm font-medium mb-2">
+                <label
+                  htmlFor="username-input"
+                  className="block text-white text-sm font-medium mb-2"
+                >
                   Username
                 </label>
                 <input
@@ -177,7 +182,9 @@ const PublicToggle: React.FC<PublicToggleProps> = ({
                   className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-accent focus:outline-none"
                   maxLength={20}
                 />
-                <p className="text-muted text-xs mt-1">Use only lowercase letters, numbers, and hyphens</p>
+                <p className="text-muted text-xs mt-1">
+                  Use only lowercase letters, numbers, and hyphens
+                </p>
               </div>
               <div className="flex gap-3">
                 <button
@@ -212,5 +219,4 @@ const PublicToggle: React.FC<PublicToggleProps> = ({
   );
 };
 
-export default PublicToggle; 
-
+export default PublicToggle;

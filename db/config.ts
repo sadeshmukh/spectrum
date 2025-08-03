@@ -49,6 +49,18 @@ const UserSessions = defineTable({
   },
 });
 
+const Challenges = defineTable({
+  columns: {
+    id: column.text({ primaryKey: true }),
+    itemId: column.number({ references: () => Items.columns.id }),
+    originalGuess: column.number(),
+    originalAccuracy: column.number(),
+    originalUsername: column.text(),
+    maxPrice: column.number({ default: 1000 }),
+    createdAt: column.date({ default: NOW }),
+  },
+});
+
 export default defineDb({
-  tables: { Users, Items, UserGuesses, UserSessions },
+  tables: { Users, Items, UserGuesses, UserSessions, Challenges },
 });

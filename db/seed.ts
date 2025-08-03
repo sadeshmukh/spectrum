@@ -1,4 +1,4 @@
-import { db, Users, Items, eq } from "astro:db";
+import { db, Users, Items, Challenges, eq } from "astro:db";
 import { scrapedItems } from "./scraped-items";
 
 export default async function seed() {

@@ -3,6 +3,7 @@ import { writeFile } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import pLimit from "p-limit";
+import { rewriteTitles } from "./lib/title-rewriter";
 
 // WARNING: this script is against Amazon's TOS
 // I wasn't careful enough and got my IP banned, I believe
@@ -288,6 +289,8 @@ async function main() {
     if (validItems.length === 0) {
       throw new Error("No valid items to write");
     }
+
+    await rewriteTitles(validItems);
 
     const outputPath = join(
       dirname(fileURLToPath(import.meta.url)),
