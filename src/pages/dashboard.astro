@@ -76,12 +76,12 @@ const userStats = {
             >
               Guess
             </a>
-            <a
-              href="/leaderboard"
-              class="text-muted hover:text-white text-sm font-medium transition-all duration-200 hover:scale-105"
+            <button
+              disabled
+              class="text-muted text-sm font-medium cursor-not-allowed opacity-50"
             >
-              Leaderboard
-            </a>
+              Leaderboard (coming soon)
+            </button>
             <a
               href="/about"
               class="text-muted hover:text-white text-sm font-medium transition-all duration-200 hover:scale-105"
@@ -97,7 +97,7 @@ const userStats = {
               user.isAdmin && (
                 <a
                   href="/admin"
-                  class="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-red-500/25"
+                  class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
                 >
                   Admin
                 </a>
@@ -178,53 +178,18 @@ const userStats = {
     <main class="max-w-7xl mx-auto px-6 py-8">
       <!-- Welcome -->
       <div class="mb-8">
-        <h2 class="text-2xl font-bold text-white mb-1">
+        <h1 class="text-2xl font-semibold text-white">
           Welcome back, {user.name?.split(" ")[0]}
-        </h2>
-      </div>
-
-      <!-- Challenge Section - BIG and Prominent -->
-      <div
-        class="bg-gradient-to-br from-accent/20 to-accent/5 rounded-xl p-8 mb-8 border border-accent/20"
-      >
-        <div class="text-center">
-          <div
-            class="w-20 h-20 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-6"
-          >
-            <svg
-              class="w-10 h-10 text-accent"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
-          </div>
-          <h3 class="text-3xl font-bold text-white mb-2">Ready to Guess?</h3>
-          <p class="text-muted text-lg mb-8">
-            <span class="text-accent">🤔</span>
-            Good luck!
-          </p>
-          <button
-            class="bg-accent text-black px-8 py-4 rounded-lg text-lg font-semibold hover:bg-accent/90 transition-colors transform hover:scale-105 shadow-lg hover:cursor-pointer"
-            onclick="window.location.href='/guess'"
-          >
-            MAKE A GUESS
-          </button>
-        </div>
+        </h1>
       </div>
 
       <!-- Personal Stats -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-card rounded-lg p-6">
+        <div class="bg-card rounded-lg p-6 border border-gray-700/50">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-muted text-sm">Your Guesses</p>
-              <p class="text-2xl font-bold text-white">
+              <p class="text-muted text-sm font-medium">Total Guesses</p>
+              <p class="text-2xl font-semibold text-white">
                 {userStats.totalGuesses}
               </p>
             </div>
@@ -253,11 +218,11 @@ const userStats = {
           </div>
         </div>
 
-        <div class="bg-card rounded-lg p-6">
+        <div class="bg-card rounded-lg p-6 border border-gray-700/50">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-muted text-sm">Best Accuracy</p>
-              <p class="text-2xl font-bold text-white">
+              <p class="text-muted text-sm font-medium">Best Accuracy</p>
+              <p class="text-2xl font-semibold text-white">
                 {
                   userStats.bestAccuracy > 0
                     ? `${userStats.bestAccuracy.toFixed(1)}%`
@@ -284,11 +249,11 @@ const userStats = {
           </div>
         </div>
 
-        <div class="bg-card rounded-lg p-6">
+        <div class="bg-card rounded-lg p-6 border border-gray-700/50">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-muted text-sm">Average Accuracy</p>
-              <p class="text-2xl font-bold text-white">
+              <p class="text-muted text-sm font-medium">Average Accuracy</p>
+              <p class="text-2xl font-semibold text-white">
                 {
                   userStats.averageAccuracy > 0
                     ? `${userStats.averageAccuracy.toFixed(1)}%`
@@ -316,15 +281,48 @@ const userStats = {
         </div>
       </div>
 
+      <div class="flex justify-center mb-8">
+        <div
+          class="bg-card rounded-lg p-8 border border-gray-700/50 max-w-2xl w-full"
+        >
+          <div class="text-center">
+            <div
+              class="w-20 h-20 bg-accent/10 rounded-lg flex items-center justify-center mx-auto mb-6"
+            >
+              <svg
+                class="w-10 h-10 text-accent"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+              </svg>
+            </div>
+            <h2 class="text-2xl font-semibold text-white mb-3">
+              Ready to Guess?
+            </h2>
+            <p class="text-muted mb-8">Test your pricing intuition</p>
+            <button
+              class="bg-accent text-black px-8 py-4 rounded-lg text-base font-medium hover:bg-accent/90 transition-colors w-full cursor-pointer"
+              onclick="window.location.href='/guess'"
+            >
+              Make a Guess
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Recent Activity -->
-      <div class="bg-card rounded-lg p-6">
-        <h3 class="text-lg font-semibold text-white mb-4">
-          Your Recent Guesses
-        </h3>
+      <div class="bg-card rounded-lg p-6 border border-gray-700/50">
+        <h2 class="text-lg font-semibold text-white mb-4">Recent Activity</h2>
         {
           recentGuesses.length === 0 ? (
             <div class="text-center py-8">
-              <div class="w-12 h-12 bg-muted/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div class="w-12 h-12 bg-muted/10 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <svg
                   class="w-6 h-6 text-muted"
                   fill="none"
@@ -347,7 +345,7 @@ const userStats = {
           ) : (
             <div class="space-y-3">
               {recentGuesses.map((guess) => (
-                <div class="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg">
+                <div class="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-700/30">
                   <div class="flex items-center gap-3">
                     <div class="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center">
                       <svg
